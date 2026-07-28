@@ -14,6 +14,11 @@ export interface ViewDefinition {
 	icon: string;
 	/** Timelines need width, so they open as a tab instead of in the sidebar. */
 	placement: "main" | "sidebar";
+	/**
+	 * Only the timeline earns a ribbon button. The other views are a command
+	 * away, and four buttons for one plugin crowds out everything else.
+	 */
+	ribbon?: boolean;
 	create: (leaf: WorkspaceLeaf, plugin: LorePlugin) => View;
 }
 
@@ -24,6 +29,7 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		commandKey: "command.openTimeline",
 		icon: "git-branch",
 		placement: "main",
+		ribbon: true,
 		create: (leaf, plugin) => new TimelineView(leaf, plugin),
 	},
 	{

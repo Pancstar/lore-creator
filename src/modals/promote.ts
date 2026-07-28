@@ -153,15 +153,13 @@ export class PromoteModal extends Modal {
 
 	/** Leaves the draft in place with a pointer, rather than removing the note. */
 	private async emptyDraft(title: string) {
-		const current = await this.app.vault.read(this.draft);
-		const match = current.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
-		const frontmatter = match ? match[0] : "";
 		const notice = this.plugin.i18n.t("promote.movedNotice", title);
 
-		await this.app.vault.modify(
-			this.draft,
-			`${frontmatter}# ${this.draft.basename}\n\n${notice}\n`,
-		);
+		await this.app.vault.process(this.draft, (current) => {
+			const match = current.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+			const frontmatter = match ? match[0] : "";
+			return `${frontmatter}# ${this.draft.basename}\n\n${notice}\n`;
+		});
 	}
 
 	onClose() {

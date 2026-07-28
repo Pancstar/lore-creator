@@ -191,7 +191,7 @@ export class VersionStore {
 			frontmatter["version-of"] = `[[${active.basename}]]`;
 		});
 
-		await this.app.vault.modify(active, targetContent);
+		await this.app.vault.process(active, () => targetContent);
 		await this.app.fileManager.processFrontMatter(active, (frontmatter) => {
 			delete frontmatter["version-of"];
 		});

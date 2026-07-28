@@ -56,9 +56,11 @@ export default class LorePlugin extends Plugin {
 		for (const definition of VIEW_DEFINITIONS) {
 			this.registerView(definition.type, (leaf) => definition.create(leaf, this));
 
-			this.addRibbonIcon(definition.icon, this.i18n.t(definition.titleKey), () => {
-				void this.activateView(definition.type);
-			});
+			if (definition.ribbon) {
+				this.addRibbonIcon(definition.icon, this.i18n.t(definition.titleKey), () => {
+					void this.activateView(definition.type);
+				});
+			}
 
 			this.addCommand({
 				id: `open-${definition.type}`,
