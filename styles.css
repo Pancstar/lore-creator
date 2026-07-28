@@ -405,13 +405,15 @@ button.plc-badge-version:hover {
 	position: absolute;
 	left: 0;
 	right: 0;
-	/* Sits above Obsidian's floating status bar rather than under it. */
-	bottom: var(--plc-status-bar-offset, 0px);
+	bottom: 0;
 	z-index: 10;
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-3);
-	padding: var(--size-2-3) var(--size-4-4);
+	/* Reaches the bottom edge so no note text shows beneath it, while the extra
+	   bottom padding keeps its controls clear of Obsidian's floating status bar. */
+	padding: var(--size-2-3) var(--size-4-4)
+		calc(var(--size-2-3) + var(--plc-status-bar-offset, 0px));
 	border-top: 1px solid var(--background-modifier-border);
 	background: var(--background-primary);
 }
