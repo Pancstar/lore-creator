@@ -1,0 +1,10 @@
+{
+	"id": "pancstar-lore-creator",
+	"name": "PancstaR Lore Creator",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.0",
+	"description": "Design fictional universes: branching timelines, versioned story fragments, custom calendars and structured worldbuilding entities.",
+	"author": "PancstaR",
+	"authorUrl": "https://github.com/pancstar/pancstar-lore-creator",
+	"isDesktopOnly": false
+}
