@@ -151,7 +151,7 @@ export class ExportModal extends Modal {
 
 		try {
 			const document = await this.buildDocument(entries);
-			const folder = "Dışa Aktarım";
+			const folder = this.plugin.settings.exportFolder;
 			await ensureFolder(this.app, folder);
 
 			const path = await this.uniquePath(folder, name);

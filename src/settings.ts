@@ -1,29 +1,40 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type LorePlugin from "./main";
 import type { Language } from "./i18n";
+import { SetupModal } from "./setup/wizard";
 
 export interface LoreSettings {
 	language: Language;
 	universeFile: string;
-	systemFolder: string;
+	registryFile: string;
 	versionsFolder: string;
 	templatesFolder: string;
 	versionSetsFile: string;
+	exportFolder: string;
 	showEarthTime: boolean;
 	minimapPinned: boolean;
 	minimapMode: "wide" | "near";
+	/** Cleared once the vault has been set up, so the offer is made only once. */
+	setupOffered: boolean;
 }
 
+/**
+ * Paths default to English so the plugin reads sensibly in a fresh vault. Every
+ * one of them is a setting — a vault is free to name these folders in whatever
+ * language it is written in.
+ */
 export const DEFAULT_SETTINGS: LoreSettings = {
 	language: "auto",
-	universeFile: "EVREN.md",
-	systemFolder: "_Sistem",
-	versionsFolder: "_Sürümler",
-	templatesFolder: "_Şablonlar",
-	versionSetsFile: "_Sistem/SÜRÜM SETLERİ.md",
+	universeFile: "Universe.md",
+	registryFile: "System/Types.md",
+	versionsFolder: "Versions",
+	templatesFolder: "Templates",
+	versionSetsFile: "System/Version sets.md",
+	exportFolder: "Exports",
 	showEarthTime: true,
 	minimapPinned: false,
 	minimapMode: "near",
+	setupOffered: false,
 };
 
 export class LoreSettingTab extends PluginSettingTab {
@@ -72,12 +83,12 @@ export class LoreSettingTab extends PluginSettingTab {
 		);
 
 		this.addPathSetting(
-			t("settings.systemFolder"),
-			t("settings.systemFolder.desc"),
-			DEFAULT_SETTINGS.systemFolder,
-			() => this.plugin.settings.systemFolder,
+			t("settings.registryFile"),
+			t("settings.registryFile.desc"),
+			DEFAULT_SETTINGS.registryFile,
+			() => this.plugin.settings.registryFile,
 			(value) => {
-				this.plugin.settings.systemFolder = value;
+				this.plugin.settings.registryFile = value;
 			},
 		);
 
@@ -110,6 +121,25 @@ export class LoreSettingTab extends PluginSettingTab {
 				this.plugin.settings.versionSetsFile = value;
 			},
 		);
+
+		this.addPathSetting(
+			t("settings.exportFolder"),
+			t("settings.exportFolder.desc"),
+			DEFAULT_SETTINGS.exportFolder,
+			() => this.plugin.settings.exportFolder,
+			(value) => {
+				this.plugin.settings.exportFolder = value;
+			},
+		);
+
+		new Setting(containerEl)
+			.setName(t("setup.run"))
+			.setDesc(t("setup.run.desc"))
+			.addButton((button) =>
+				button.setButtonText(t("setup.open")).onClick(() => {
+					new SetupModal(this.app, this.plugin).open();
+				}),
+			);
 
 		new Setting(containerEl).setName(t("settings.calendar")).setHeading();
 		containerEl.createEl("p", {

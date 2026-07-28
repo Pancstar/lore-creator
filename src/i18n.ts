@@ -22,8 +22,6 @@ const en: Strings = {
 	"settings.folders": "Folders and files",
 	"settings.universeFile": "Universe file",
 	"settings.universeFile.desc": "Root note holding the universe name and calendar definition.",
-	"settings.systemFolder": "System folder",
-	"settings.systemFolder.desc": "Holds the schema, type registry and AI brief.",
 	"settings.versionsFolder": "Versions folder",
 	"settings.versionsFolder.desc": "Older versions of notes are stored here. Never deleted automatically.",
 	"settings.templatesFolder": "Templates folder",
@@ -291,6 +289,37 @@ const en: Strings = {
 	"export.nameRequired": "Give the file a name first.",
 	"export.failed": "The export failed — see the console for details.",
 	"command.export": "Export the universe",
+
+	"settings.registryFile": "Type registry",
+	"settings.registryFile.desc": "Note whose frontmatter defines the available note types.",
+	"settings.exportFolder": "Exports folder",
+	"settings.exportFolder.desc": "Where exported documents are written.",
+
+	"setup.title": "Set up this vault",
+	"setup.desc":
+		"Creates the folders, templates and type registry this plugin reads. Existing files are never overwritten.",
+	"setup.universeName": "Universe name",
+	"setup.universeNamePlaceholder": "e.g. Obscure Universe",
+	"setup.fileLanguage": "Language for created files",
+	"setup.fileLanguage.desc": "Folder and template names. Independent of the interface language.",
+	"setup.prefix": "Number the folders",
+	"setup.prefix.desc": "Keeps related folders together instead of letting them sort alphabetically.",
+	"setup.create": "Create",
+	"setup.done": "Created {0} files",
+	"setup.failed": "Setup failed — see the console for details.",
+	"setup.untitled": "Untitled universe",
+	"setup.offer": "PancstaR Lore Creator: click here to set up this vault.",
+	"setup.run": "Vault structure",
+	"setup.run.desc": "Create any missing folders, templates and the type registry.",
+	"setup.open": "Set up",
+	"setup.registry.heading": "Types",
+	"setup.registry.body":
+		"This note's frontmatter is read by the plugin. Add an entry to define a new type; the body is yours to document them in.",
+	"setup.universe.body": "A short description of the universe goes here.",
+	"setup.universe.calendar": "Calendar",
+	"setup.universe.calendarBody":
+		"Set the calendar fields in the plugin settings. A note's time is always a single sortable number; these fields decide how it is shown and how it maps to Earth time.",
+	"command.setup": "Set up this vault",
 };
 
 const tr: Strings = {
@@ -313,8 +342,6 @@ const tr: Strings = {
 	"settings.folders": "Klasörler ve dosyalar",
 	"settings.universeFile": "Evren dosyası",
 	"settings.universeFile.desc": "Evrenin adını ve takvim tanımını tutan kök not.",
-	"settings.systemFolder": "Sistem klasörü",
-	"settings.systemFolder.desc": "Şema, tür listesi ve AI brief burada durur.",
 	"settings.versionsFolder": "Sürümler klasörü",
 	"settings.versionsFolder.desc": "Notların eski sürümleri burada saklanır. Kendiliğinden asla silinmez.",
 	"settings.templatesFolder": "Şablonlar klasörü",
@@ -581,6 +608,37 @@ const tr: Strings = {
 	"export.nameRequired": "Önce dosyaya bir ad ver.",
 	"export.failed": "Dışa aktarma başarısız oldu — ayrıntı için konsola bak.",
 	"command.export": "Evreni dışa aktar",
+
+	"settings.registryFile": "Tür kaydı",
+	"settings.registryFile.desc": "Frontmatter'ı kullanılabilir not türlerini tanımlayan not.",
+	"settings.exportFolder": "Dışa aktarım klasörü",
+	"settings.exportFolder.desc": "Dışa aktarılan dokümanların yazıldığı yer.",
+
+	"setup.title": "Bu vault'u kur",
+	"setup.desc":
+		"Eklentinin okuduğu klasörleri, şablonları ve tür kaydını oluşturur. Var olan dosyaların üzerine asla yazmaz.",
+	"setup.universeName": "Evren adı",
+	"setup.universeNamePlaceholder": "örn. Obscure Universe",
+	"setup.fileLanguage": "Oluşturulacak dosyaların dili",
+	"setup.fileLanguage.desc": "Klasör ve şablon adları. Arayüz dilinden bağımsız.",
+	"setup.prefix": "Klasörleri numarala",
+	"setup.prefix.desc": "İlgili klasörleri bir arada tutar, alfabetik sıraya dağılmasını engeller.",
+	"setup.create": "Oluştur",
+	"setup.done": "{0} dosya oluşturuldu",
+	"setup.failed": "Kurulum başarısız oldu — ayrıntı için konsola bak.",
+	"setup.untitled": "Adsız evren",
+	"setup.offer": "PancstaR Lore Creator: vault'u kurmak için buraya tıkla.",
+	"setup.run": "Vault yapısı",
+	"setup.run.desc": "Eksik klasörleri, şablonları ve tür kaydını oluştur.",
+	"setup.open": "Kur",
+	"setup.registry.heading": "Türler",
+	"setup.registry.body":
+		"Bu notun frontmatter'ı eklenti tarafından okunur. Yeni tür tanımlamak için bir girdi ekle; gövde onları açıklaman için senin.",
+	"setup.universe.body": "Evrenin kısa tanımı buraya.",
+	"setup.universe.calendar": "Takvim",
+	"setup.universe.calendarBody":
+		"Takvim alanlarını eklenti ayarlarından doldur. Bir notun zamanı her zaman tek bir sıralanabilir sayıdır; bu alanlar onun nasıl gösterileceğini ve Dünya zamanına nasıl karşılık geldiğini belirler.",
+	"command.setup": "Bu vault'u kur",
 };
 
 const TABLES: Record<Exclude<Language, "auto">, Strings> = { en, tr };

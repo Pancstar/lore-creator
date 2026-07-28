@@ -1,4 +1,5 @@
-import { MarkdownView, Plugin, TFile, WorkspaceLeaf, moment, normalizePath } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf, moment, normalizePath } from "obsidian";
+import { SetupModal } from "./setup/wizard";
 import { DEFAULT_SETTINGS, LoreSettingTab, LoreSettings } from "./settings";
 import { I18n } from "./i18n";
 import { Universe } from "./universe";
@@ -38,7 +39,7 @@ export default class LorePlugin extends Plugin {
 	}
 
 	private get registryPath(): string {
-		return normalizePath(`${this.settings.systemFolder}/TÜRLER.md`);
+		return normalizePath(this.settings.registryFile);
 	}
 
 	async onload() {
@@ -87,6 +88,12 @@ export default class LorePlugin extends Plugin {
 			id: "version-sets",
 			name: this.i18n.t("command.versionSets"),
 			callback: () => new VersionSetsModal(this.app, this).open(),
+		});
+
+		this.addCommand({
+			id: "setup-vault",
+			name: this.i18n.t("command.setup"),
+			callback: () => new SetupModal(this.app, this).open(),
 		});
 
 		this.addCommand({
@@ -139,7 +146,10 @@ export default class LorePlugin extends Plugin {
 
 		// Views exist before this plugin finishes loading, so draw into them once
 		// the workspace is settled rather than waiting for the next file to open.
-		this.app.workspace.onLayoutReady(() => this.decorateNotes());
+		this.app.workspace.onLayoutReady(() => {
+			this.decorateNotes();
+			this.offerSetup();
+		});
 	}
 
 	onunload() {
@@ -171,6 +181,26 @@ export default class LorePlugin extends Plugin {
 			(target) => void this.app.workspace.getLeaf(false).openFile(target),
 		).open();
 		return true;
+	}
+
+	/**
+	 * A vault with no universe note has nothing for any of these views to show,
+	 * so the offer to build one is made once and then never again — an author
+	 * who declined does not want asking every time Obsidian starts.
+	 */
+	private offerSetup() {
+		if (this.settings.setupOffered) return;
+		if (this.universe.file) return;
+
+		const notice = new Notice(this.i18n.t("setup.offer"), 15000);
+		notice.noticeEl.addClass("plc-clickable-notice");
+		notice.noticeEl.addEventListener("click", () => {
+			notice.hide();
+			new SetupModal(this.app, this).open();
+		});
+
+		this.settings.setupOffered = true;
+		void this.saveData(this.settings);
 	}
 
 	/** Draws the banner and the navigation bar into every open markdown view. */
