@@ -1,14 +1,11 @@
 import { App, Modal, Notice, Setting, TFile } from "obsidian";
 import type LorePlugin from "../main";
 import { ConfirmModal } from "./confirm";
+import { asString } from "../frontmatter";
 
 interface FlowEntry {
 	id: string;
 	name: string;
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
 }
 
 /** Flow entries are `id`, `id: Display name`, or an object with both. */
@@ -129,7 +126,7 @@ export class LaneEditModal extends Modal {
 	}
 
 	private readFlows(): FlowEntry[] {
-		const raw = this.app.metadataCache.getFileCache(this.timelineFile)?.frontmatter?.flows;
+		const raw: unknown = this.app.metadataCache.getFileCache(this.timelineFile)?.frontmatter?.flows;
 		if (!Array.isArray(raw)) return [];
 		return raw.map(parseEntry).filter((entry): entry is FlowEntry => entry !== null);
 	}
@@ -148,13 +145,13 @@ export class LaneEditModal extends Modal {
 				flows.push({ id, name });
 			}
 
-			await this.app.fileManager.processFrontMatter(this.timelineFile, (frontmatter) => {
+			await this.app.fileManager.processFrontMatter(this.timelineFile, (frontmatter: Record<string, unknown>) => {
 				frontmatter.flows = flows.map(formatEntry);
 			});
 
 			if (id !== this.original.id) {
 				for (const file of this.members) {
-					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+					await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 						frontmatter.flow = id;
 					});
 				}

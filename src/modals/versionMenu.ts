@@ -58,15 +58,15 @@ export class VersionMenuModal extends Modal {
 		if (entry.active) setIcon(markEl, "check");
 
 		const textEl = rowEl.createDiv({ cls: "plc-version-text" });
-		textEl.createEl("div", {
+		textEl.createDiv({
 			cls: "plc-version-label",
 			text: this.plugin.versions.label(entry),
 		});
 		if (entry.note) {
-			textEl.createEl("div", { cls: "plc-version-note", text: entry.note });
+			textEl.createDiv({ cls: "plc-version-note", text: entry.note });
 		}
 		if (entry.active) {
-			textEl.createEl("div", { cls: "plc-version-badge", text: t("version.activeLabel") });
+			textEl.createDiv({ cls: "plc-version-badge", text: t("version.activeLabel") });
 		}
 
 		const actionsEl = rowEl.createDiv({ cls: "plc-version-actions" });

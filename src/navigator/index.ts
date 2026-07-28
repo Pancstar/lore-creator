@@ -2,15 +2,12 @@ import { MarkdownView, TFile, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { resolveTargets } from "../links";
 import { Minimap, MinimapMode } from "./minimap";
+import { asString } from "../frontmatter";
 
 const BAR_CLASS = "plc-navbar";
 const MAP_CLASS = "plc-minimap";
 const HOST_CLASS = "plc-has-navigator";
 const STATUS_BAR_OFFSET = "--plc-status-bar-offset";
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
 
 /**
  * The bar under a note and the map beside it. Fragments here are written out of
@@ -99,7 +96,7 @@ export class Navigator {
 		if (targets.length === 0) {
 			// An empty `next` usually means the thread ends here, so nothing is
 			// invented to fill the gap.
-			sideEl.createEl("span", {
+			sideEl.createSpan({
 				cls: "plc-navbar-end",
 				text: this.plugin.i18n.t(direction === "next" ? "nav.noNext" : "nav.noPrev"),
 			});
@@ -151,10 +148,10 @@ export class Navigator {
 			attr: { "aria-label": t("nav.mode"), title: t("nav.mode") },
 		});
 		setIcon(modeButton, this.plugin.settings.minimapMode === "wide" ? "minimize-2" : "maximize-2");
-		modeButton.addEventListener("click", async () => {
+		modeButton.addEventListener("click", () => {
 			const next: MinimapMode = this.plugin.settings.minimapMode === "wide" ? "near" : "wide";
 			this.plugin.settings.minimapMode = next;
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		const pinButton = actionsEl.createEl("button", {
@@ -162,9 +159,9 @@ export class Navigator {
 			attr: { "aria-label": t("nav.pin"), title: t("nav.pin") },
 		});
 		setIcon(pinButton, this.plugin.settings.minimapPinned ? "pin" : "pin-off");
-		pinButton.addEventListener("click", async () => {
+		pinButton.addEventListener("click", () => {
 			this.plugin.settings.minimapPinned = !this.plugin.settings.minimapPinned;
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		mapEl.toggleClass("is-pinned", this.plugin.settings.minimapPinned);

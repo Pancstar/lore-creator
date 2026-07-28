@@ -19,7 +19,6 @@ import { isTimePrecision } from "../time";
 
 export const VIEW_TYPE_TIMELINE = "plc-timeline";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
 const MIN_DENSITY = 0.1;
@@ -59,7 +58,7 @@ function svgEl<K extends keyof SVGElementTagNameMap>(
 	tag: K,
 	attrs: Record<string, string | number> = {},
 ): SVGElementTagNameMap[K] {
-	const element = document.createElementNS(SVG_NS, tag);
+	const element = createSvg(tag);
 	for (const [name, value] of Object.entries(attrs)) {
 		element.setAttribute(name, String(value));
 	}
@@ -239,7 +238,6 @@ export class TimelineView extends ItemView {
 		}
 
 		const definition = definitions.find((entry) => entry.id === this.timelineId);
-		const calendar = this.plugin.universe.readCalendar();
 
 		const times = graph.nodes
 			.map((node) => node.time)
@@ -565,7 +563,7 @@ export class TimelineView extends ItemView {
 	 */
 	private snapStep(entry: PlacedNode): number {
 		const frontmatter = this.app.metadataCache.getFileCache(entry.node.file)?.frontmatter;
-		const precision = frontmatter?.["time-precision"];
+		const precision: unknown = frontmatter?.["time-precision"];
 		const days = this.plugin.universe.readCalendar().calendarDays || 365;
 
 		if (precision === "date") return 1 / days;
@@ -810,7 +808,7 @@ export class TimelineView extends ItemView {
 	}
 
 	private async writeTime(file: TFile, time: number | null, flow: string | null) {
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 			if (time !== null) {
 				frontmatter.time = time;
 				if (!isTimePrecision(frontmatter["time-precision"])) {

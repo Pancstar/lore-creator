@@ -62,16 +62,16 @@ export class VersionSetsModal extends Modal {
 
 		const rowEl = parent.createDiv({ cls: "plc-version-row" });
 		const textEl = rowEl.createDiv({ cls: "plc-version-text" });
-		textEl.createEl("div", { cls: "plc-version-label", text: set.name });
+		textEl.createDiv({ cls: "plc-version-label", text: set.name });
 
 		const summary =
 			plan.changes.length === 0
 				? t("sets.alreadyActive")
 				: t("sets.wouldChange", String(plan.changes.length));
-		textEl.createEl("div", { cls: "plc-version-note", text: summary });
+		textEl.createDiv({ cls: "plc-version-note", text: summary });
 
 		if (plan.missing.length > 0) {
-			textEl.createEl("div", {
+			textEl.createDiv({
 				cls: "plc-version-note plc-warning",
 				text: t("sets.missing", plan.missing.join(", ")),
 			});

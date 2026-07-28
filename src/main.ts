@@ -1,4 +1,4 @@
-import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf, moment, normalizePath } from "obsidian";
+import { Notice, Plugin, TFile, WorkspaceLeaf, getLanguage, normalizePath } from "obsidian";
 import { SetupModal } from "./setup/wizard";
 import { DEFAULT_SETTINGS, LoreSettingTab, LoreSettings } from "./settings";
 import { I18n } from "./i18n";
@@ -195,8 +195,8 @@ export default class LorePlugin extends Plugin {
 		if (this.universe.file) return;
 
 		const notice = new Notice(this.i18n.t("setup.offer"), 15000);
-		notice.noticeEl.addClass("plc-clickable-notice");
-		notice.noticeEl.addEventListener("click", () => {
+		notice.messageEl.addClass("plc-clickable-notice");
+		notice.messageEl.addEventListener("click", () => {
 			notice.hide();
 			new SetupModal(this.app, this).open();
 		});
@@ -229,7 +229,8 @@ export default class LorePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const stored = (await this.loadData()) as Partial<LoreSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, stored);
 	}
 
 	async saveSettings() {
@@ -244,10 +245,9 @@ export default class LorePlugin extends Plugin {
 	}
 
 	private applyLanguage() {
-		// Obsidian keeps its bundled moment in sync with the interface language,
-		// which is more dependable than reading localStorage directly.
-		const locale = moment.locale() || window.localStorage.getItem("language") || "en";
-		this.i18n.setLanguage(this.settings.language, locale);
+		// Obsidian reports its own interface language, which is more dependable
+		// than reading the setting out of local storage ourselves.
+		this.i18n.setLanguage(this.settings.language, getLanguage() || "en");
 	}
 
 	private refreshViews() {

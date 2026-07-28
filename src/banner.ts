@@ -4,6 +4,7 @@ import { IconChoice, IconPickerModal } from "./modals/iconPicker";
 import { TimePickerModal, TimeValue } from "./modals/timePicker";
 import { VersionMenuModal } from "./modals/versionMenu";
 import { isTimePrecision } from "./time";
+import { asNumberOrNull, asString } from "./frontmatter";
 
 const BANNER_CLASS = "plc-banner";
 
@@ -12,16 +13,6 @@ type Status = (typeof STATUSES)[number];
 
 function isStatus(value: unknown): value is Status {
 	return typeof value === "string" && (STATUSES as readonly string[]).includes(value);
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
-
-function asNumberOrNull(value: unknown): number | null {
-	if (value === null || value === undefined || value === "") return null;
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
-	return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -97,7 +88,7 @@ export class Banner {
 		}
 		iconButton.addEventListener("click", () => this.pickIcon(file, { icon, iconType }));
 
-		rowEl.createEl("span", { cls: "plc-banner-title", text: file.basename });
+		rowEl.createSpan({ cls: "plc-banner-title", text: file.basename });
 	}
 
 	private buildMetaRow(
@@ -110,7 +101,7 @@ export class Banner {
 		const type = this.plugin.types.byId(typeId);
 
 		if (type) {
-			rowEl.createEl("span", {
+			rowEl.createSpan({
 				cls: "plc-badge plc-badge-type",
 				text: this.plugin.types.label(type, this.plugin.language),
 			});
@@ -138,7 +129,7 @@ export class Banner {
 		}
 
 		if (frontmatter["version-of"]) {
-			rowEl.createEl("span", {
+			rowEl.createSpan({
 				cls: "plc-badge plc-badge-archived",
 				text: this.plugin.i18n.t("banner.oldVersion"),
 			});
@@ -152,7 +143,7 @@ export class Banner {
 		const flow = asString(frontmatter.flow);
 		if (timeline) {
 			const trail = flow ? `${timeline} › ${flow}` : timeline;
-			rowEl.createEl("span", { cls: "plc-banner-trail", text: trail });
+			rowEl.createSpan({ cls: "plc-banner-trail", text: trail });
 		}
 
 		const time = asNumberOrNull(frontmatter.time);
@@ -186,7 +177,7 @@ export class Banner {
 
 	private pickIcon(file: TFile, current: IconChoice) {
 		new IconPickerModal(this.plugin.app, this.plugin.i18n, current, (choice) => {
-			void this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
+			void this.plugin.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 				if (choice === null) {
 					delete frontmatter.icon;
 					delete frontmatter["icon-type"];
@@ -200,7 +191,7 @@ export class Banner {
 
 	private async cycleStatus(file: TFile, current: Status) {
 		const next = STATUSES[(STATUSES.indexOf(current) + 1) % STATUSES.length];
-		await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 			frontmatter.status = next;
 		});
 		new Notice(this.plugin.i18n.t(`status.${next}`));
@@ -223,7 +214,7 @@ export class Banner {
 			this.plugin.language,
 			current,
 			(value) => {
-				void this.plugin.app.fileManager.processFrontMatter(file, (target) => {
+				void this.plugin.app.fileManager.processFrontMatter(file, (target: Record<string, unknown>) => {
 					if (value.time === null) {
 						delete target.time;
 						delete target["time-end"];

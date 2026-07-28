@@ -1,6 +1,7 @@
 import { App, Modal, Setting, TFile } from "obsidian";
 import type LorePlugin from "../main";
 import { TimelineModel } from "../timeline/model";
+import { asNumberOrNull, asString } from "../frontmatter";
 
 const ANY = "__any";
 
@@ -14,16 +15,6 @@ interface Row {
 	flow: string;
 	time: number | null;
 	timeLabel: string;
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
-
-function asNumberOrNull(value: unknown): number | null {
-	if (value === null || value === undefined || value === "") return null;
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
-	return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -214,7 +205,7 @@ export class SearchModal extends Modal {
 			.filter((row) => this.matches(row))
 			.sort((a, b) => a.title.localeCompare(b.title));
 
-		this.resultsEl.createEl("div", {
+		this.resultsEl.createDiv({
 			cls: "plc-list-meta",
 			text: t("search.count", String(rows.length)),
 		});
@@ -253,7 +244,7 @@ export class SearchModal extends Modal {
 		}
 
 		if (rows.length > 200) {
-			this.resultsEl.createEl("div", {
+			this.resultsEl.createDiv({
 				cls: "plc-list-meta",
 				text: t("search.more", String(rows.length - 200)),
 			});

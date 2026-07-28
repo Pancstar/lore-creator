@@ -1,6 +1,7 @@
 import { App, TFile } from "obsidian";
 import { linkTargets } from "./links";
 import { TimelineModel } from "./timeline/model";
+import { asNumberOrNull, asString } from "./frontmatter";
 
 export type IssueKind =
 	| "broken-link"
@@ -15,16 +16,6 @@ export interface Issue {
 	file: TFile;
 	/** Filled in when the issue concerns a second note or a named target. */
 	detail: string;
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
-
-function asNumberOrNull(value: unknown): number | null {
-	if (value === null || value === undefined || value === "") return null;
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
-	return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**

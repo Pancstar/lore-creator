@@ -134,7 +134,7 @@ export class PromoteModal extends Modal {
 
 			const created = await this.app.vault.create(path, content);
 
-			await this.app.fileManager.processFrontMatter(this.draft, (frontmatter) => {
+			await this.app.fileManager.processFrontMatter(this.draft, (frontmatter: Record<string, unknown>) => {
 				frontmatter["promoted-to"] = `[[${title}]]`;
 			});
 

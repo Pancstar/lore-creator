@@ -140,7 +140,9 @@ export class TypeRegistry {
 		if (this.cache) return this.cache;
 
 		const file = this.file;
-		const raw = file ? this.app.metadataCache.getFileCache(file)?.frontmatter?.registry : undefined;
+		const raw: unknown = file
+			? this.app.metadataCache.getFileCache(file)?.frontmatter?.registry
+			: undefined;
 
 		const parsed = Array.isArray(raw)
 			? raw.map(parseType).filter((type): type is TypeDefinition => type !== null)

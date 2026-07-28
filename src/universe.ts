@@ -1,4 +1,5 @@
 import { App, TFile } from "obsidian";
+import { asNumber, asNumberOrNull, asString } from "./frontmatter";
 
 /**
  * Calendar definition, stored in the universe note's frontmatter rather than in
@@ -25,17 +26,6 @@ export const DEFAULT_CALENDAR: Calendar = {
 	earthEpoch: null,
 	earthRatio: 1,
 };
-
-function asNumber(value: unknown, fallback: number): number {
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value ?? ""));
-	return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function asOptionalNumber(value: unknown): number | null {
-	if (value === null || value === undefined || value === "") return null;
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
-	return Number.isFinite(parsed) ? parsed : null;
-}
 
 export class Universe {
 	constructor(
@@ -67,11 +57,11 @@ export class Universe {
 		const frontmatter = this.frontmatter();
 		if (!frontmatter) return { ...DEFAULT_CALENDAR };
 		return {
-			calendarName: String(frontmatter["calendar-name"] ?? ""),
-			calendarUnit: String(frontmatter["calendar-unit"] ?? ""),
+			calendarName: asString(frontmatter["calendar-name"]),
+			calendarUnit: asString(frontmatter["calendar-unit"]),
 			calendarEpoch: asNumber(frontmatter["calendar-epoch"], 0),
 			calendarDays: asNumber(frontmatter["calendar-days"], 365),
-			earthEpoch: asOptionalNumber(frontmatter["earth-epoch"]),
+			earthEpoch: asNumberOrNull(frontmatter["earth-epoch"]),
 			earthRatio: asNumber(frontmatter["earth-ratio"], 1),
 		};
 	}
@@ -81,7 +71,7 @@ export class Universe {
 		const file = this.file;
 		if (!file) return false;
 
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 			if (calendar.calendarName !== undefined) frontmatter["calendar-name"] = calendar.calendarName;
 			if (calendar.calendarUnit !== undefined) frontmatter["calendar-unit"] = calendar.calendarUnit;
 			if (calendar.calendarEpoch !== undefined) frontmatter["calendar-epoch"] = calendar.calendarEpoch;

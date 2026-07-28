@@ -1,6 +1,7 @@
 import { App, TFile, normalizePath } from "obsidian";
 import { linkTarget } from "../links";
 import { VersionStore } from "./store";
+import { asString } from "../frontmatter";
 
 export interface VersionSetEntry {
 	/** Link text pointing at the active note, e.g. `Yükseliş`. */
@@ -27,10 +28,6 @@ export interface SetPlan {
 	missing: string[];
 	/** Notes already on the requested version. */
 	unchanged: number;
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
 }
 
 function parseNumber(value: unknown): number {
@@ -73,7 +70,7 @@ export class VersionSetStore {
 		const file = this.file;
 		if (!file) return [];
 
-		const raw = this.app.metadataCache.getFileCache(file)?.frontmatter?.sets;
+		const raw: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter?.sets;
 		if (!Array.isArray(raw)) return [];
 
 		const sets: VersionSet[] = [];
@@ -193,7 +190,7 @@ export class VersionSetStore {
 
 	private async write(sets: VersionSet[]): Promise<void> {
 		const file = await this.ensureFile();
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 			frontmatter.sets = sets.map((set) => ({
 				id: set.id,
 				name: set.name,

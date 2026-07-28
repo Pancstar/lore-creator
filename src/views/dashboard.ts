@@ -1,6 +1,7 @@
 import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { Audit, Issue, IssueKind } from "../audit";
+import { asString } from "../frontmatter";
 
 export const VIEW_TYPE_DASHBOARD = "plc-dashboard";
 
@@ -10,10 +11,6 @@ interface Unfinished {
 	icon: string;
 	type: string;
 	status: "draft" | "partial";
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
 }
 
 /**
@@ -182,7 +179,7 @@ export class DashboardView extends ItemView {
 		}
 
 		for (const [kind, group] of grouped) {
-			this.contentEl.createEl("div", {
+			this.contentEl.createDiv({
 				cls: "plc-list-meta plc-audit-kind",
 				text: t(`audit.${kind}`),
 			});

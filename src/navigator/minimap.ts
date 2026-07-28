@@ -3,15 +3,13 @@ import type LorePlugin from "../main";
 import { TimelineModel, TimelineNode } from "../timeline/model";
 import { computeLayout } from "../timeline/layout";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
 export type MinimapMode = "wide" | "near";
 
 function svgEl<K extends keyof SVGElementTagNameMap>(
 	tag: K,
 	attrs: Record<string, string | number> = {},
 ): SVGElementTagNameMap[K] {
-	const element = document.createElementNS(SVG_NS, tag);
+	const element = createSvg(tag);
 	for (const [name, value] of Object.entries(attrs)) {
 		element.setAttribute(name, String(value));
 	}

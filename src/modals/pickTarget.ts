@@ -22,7 +22,7 @@ export class PickTargetModal extends SuggestModal<TFile> {
 	}
 
 	renderSuggestion(file: TFile, el: HTMLElement) {
-		el.createEl("div", { text: file.basename });
+		el.createDiv({ text: file.basename });
 
 		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
 		const label = typeof frontmatter?.["time-label"] === "string" ? frontmatter["time-label"] : "";

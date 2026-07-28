@@ -107,7 +107,6 @@ export function computeLayout(graph: TimelineGraph, options: LayoutOptions): Lay
 
 	const times = timed.flatMap((node) => [node.time as number, node.timeEnd ?? (node.time as number)]);
 	const minTime = times.length > 0 ? Math.min(...times) : 0;
-	const maxTime = times.length > 0 ? Math.max(...times) : 0;
 
 	const scale = (value: number) => LEFT_GUTTER + CANVAS_PADDING + (value - minTime) * options.pixelsPerUnit;
 

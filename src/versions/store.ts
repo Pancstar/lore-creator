@@ -1,5 +1,6 @@
 import { App, TFile, normalizePath } from "obsidian";
 import { linkTarget } from "../links";
+import { asString } from "../frontmatter";
 
 export interface VersionInfo {
 	number: number;
@@ -14,10 +15,6 @@ export interface VersionEntry extends VersionInfo {
 }
 
 export class VersionError extends Error {}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
 
 /** Version ids are written as `v3`; anything else counts as the first version. */
 function parseNumber(value: unknown): number {
@@ -139,14 +136,14 @@ export class VersionStore {
 		await this.ensureFolder();
 		const archive = await this.app.vault.create(archivePath, content);
 
-		await this.app.fileManager.processFrontMatter(archive, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${previous.number}`;
 			frontmatter["version-of"] = `[[${active.basename}]]`;
 			if (previous.name) frontmatter["version-name"] = previous.name;
 			if (previous.note) frontmatter["version-note"] = previous.note;
 		});
 
-		await this.app.fileManager.processFrontMatter(active, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(active, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${nextNumber}`;
 			delete frontmatter["version-of"];
 			if (name.trim()) {
@@ -186,13 +183,13 @@ export class VersionStore {
 
 		await this.ensureFolder();
 		const archive = await this.app.vault.create(archivePath, activeContent);
-		await this.app.fileManager.processFrontMatter(archive, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${activeInfo.number}`;
 			frontmatter["version-of"] = `[[${active.basename}]]`;
 		});
 
 		await this.app.vault.process(active, () => targetContent);
-		await this.app.fileManager.processFrontMatter(active, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(active, (frontmatter: Record<string, unknown>) => {
 			delete frontmatter["version-of"];
 		});
 
@@ -200,7 +197,7 @@ export class VersionStore {
 	}
 
 	async rename(file: TFile, name: string, note: string): Promise<void> {
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
 			if (name.trim()) {
 				frontmatter["version-name"] = name.trim();
 			} else {

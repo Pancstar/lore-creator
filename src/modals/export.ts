@@ -2,18 +2,9 @@ import { App, Modal, Notice, Setting, TFile, normalizePath } from "obsidian";
 import type LorePlugin from "../main";
 import { extractBody, ensureFolder, sanitiseFileName } from "../noteFactory";
 import { TimelineModel } from "../timeline/model";
+import { asNumberOrNull, asString } from "../frontmatter";
 
 const ALL = "__all";
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
-
-function asNumberOrNull(value: unknown): number | null {
-	if (value === null || value === undefined || value === "") return null;
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
-	return Number.isFinite(parsed) ? parsed : null;
-}
 
 interface Entry {
 	file: TFile;

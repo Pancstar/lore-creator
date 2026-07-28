@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: write
+  # Attestations let anyone verify the released main.js really was built here.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -33,6 +36,13 @@ jobs:
             echo "Tag $TAG does not match manifest version $MANIFEST" >&2
             exit 1
           fi
+
+      - name: Attest the build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            styles.css
 
       - name: Publish the release
         env:

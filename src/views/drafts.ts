@@ -2,6 +2,7 @@ import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { linkTarget } from "../links";
 import { PromoteModal } from "../modals/promote";
+import { asString } from "../frontmatter";
 
 export const VIEW_TYPE_DRAFTS = "plc-drafts";
 
@@ -11,10 +12,6 @@ interface Draft {
 	icon: string;
 	ideaFor: string;
 	promotedTo: string;
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
 }
 
 /**

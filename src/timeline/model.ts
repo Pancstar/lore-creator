@@ -1,5 +1,6 @@
 import { App, TFile } from "obsidian";
 import { linkTargets } from "../links";
+import { asNumberOrNull, asString } from "../frontmatter";
 
 export type NodeStatus = "draft" | "partial" | "done";
 
@@ -43,16 +44,6 @@ export interface TimelineEdge {
 export interface TimelineGraph {
 	nodes: TimelineNode[];
 	edges: TimelineEdge[];
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
-}
-
-function asNumberOrNull(value: unknown): number | null {
-	if (value === null || value === undefined || value === "") return null;
-	const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
-	return Number.isFinite(parsed) ? parsed : null;
 }
 
 function asStatus(value: unknown): NodeStatus {

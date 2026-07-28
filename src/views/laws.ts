@@ -2,6 +2,7 @@ import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { linkTargets } from "../links";
 import { TimelineModel } from "../timeline/model";
+import { asString } from "../frontmatter";
 
 export const VIEW_TYPE_LAWS = "plc-laws";
 
@@ -18,10 +19,6 @@ interface Law {
 	boundBy: TFile[];
 	/** Notes declaring they break it — the reason this view is worth having. */
 	brokenBy: TFile[];
-}
-
-function asString(value: unknown): string {
-	return typeof value === "string" ? value : "";
 }
 
 export class LawsView extends ItemView {
