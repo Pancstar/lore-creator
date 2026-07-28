@@ -4,3 +4,10 @@ main.js
 data.json
 .hotreload
 .DS_Store
+
+# Local agent/config files — not meant for the repo
+CLAUDE.md
+.cursorrules
+development-logs/
+.claude/
+STATUS.md
