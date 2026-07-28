@@ -181,6 +181,18 @@ export class LoreSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(this.containerEl)
+			.setName(t("settings.calendar.days"))
+			.setDesc(t("settings.calendar.days.desc"))
+			.addText((text) =>
+				text.setValue(String(calendar.calendarDays)).onChange(async (value) => {
+					const parsed = Number.parseFloat(value);
+					if (!Number.isFinite(parsed) || parsed <= 0) return;
+					await this.plugin.universe.writeCalendar({ calendarDays: parsed });
+					this.refreshPreview();
+				}),
+			);
+
+		new Setting(this.containerEl)
 			.setName(t("settings.calendar.earthEpoch"))
 			.setDesc(t("settings.calendar.earthEpoch.desc"))
 			.addText((text) =>

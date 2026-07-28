@@ -1,3 +1,5 @@
+/* --- Side views ------------------------------------------------------ */
+
 .plc-view {
 	padding: var(--size-4-4);
 }
@@ -14,6 +16,8 @@
 	padding-top: var(--size-4-3);
 }
 
+/* --- Settings -------------------------------------------------------- */
+
 .plc-warning {
 	color: var(--text-warning);
 }
@@ -25,4 +29,208 @@
 	background: var(--background-secondary);
 	border-radius: var(--radius-s);
 	padding: var(--size-4-2) var(--size-4-3);
+}
+
+/* --- Note banner ----------------------------------------------------- */
+
+.plc-banner {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	margin: 0 auto var(--size-4-3);
+	padding: var(--size-4-3) var(--size-4-4);
+	max-width: var(--file-line-width);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.markdown-source-view.is-readable-line-width .plc-banner,
+.markdown-preview-view.is-readable-line-width .plc-banner {
+	max-width: var(--file-line-width);
+}
+
+.plc-banner-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	min-width: 0;
+}
+
+.plc-banner-icon {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.2em;
+	height: 2.2em;
+	padding: 0;
+	font-size: var(--font-ui-large);
+	line-height: 1;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--radius-s);
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.plc-banner-icon:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--background-modifier-border);
+}
+
+.plc-banner-title {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.plc-banner-meta,
+.plc-banner-time {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+	font-size: var(--font-ui-small);
+}
+
+.plc-badge {
+	padding: 0.1em 0.6em;
+	border-radius: var(--radius-s);
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+button.plc-badge {
+	height: auto;
+	border: none;
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.plc-badge-type {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+}
+
+.plc-badge-status.is-draft {
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+}
+
+.plc-badge-status.is-partial {
+	background: rgba(224, 172, 0, 0.18);
+	color: var(--color-yellow);
+}
+
+.plc-badge-status.is-done {
+	background: rgba(0, 160, 90, 0.18);
+	color: var(--color-green);
+}
+
+.plc-badge-archived {
+	background: rgba(200, 80, 60, 0.16);
+	color: var(--color-red);
+}
+
+.plc-banner-trail {
+	color: var(--text-muted);
+}
+
+.plc-banner-trail::after {
+	content: "·";
+	margin-left: var(--size-2-2);
+	color: var(--text-faint);
+}
+
+.plc-banner-timevalue {
+	padding: 0.1em 0.4em;
+	height: auto;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+}
+
+.plc-banner-timevalue:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+/* --- Icon picker ----------------------------------------------------- */
+
+.plc-icon-picker .plc-icon-tabs {
+	display: flex;
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.plc-icon-tabs button.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.plc-icon-search {
+	width: 100%;
+	margin-bottom: var(--size-4-2);
+}
+
+.plc-icon-results {
+	max-height: 22rem;
+	overflow-y: auto;
+}
+
+.plc-icon-category {
+	margin: var(--size-4-3) 0 var(--size-2-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+}
+
+.plc-icon-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(2.4rem, 1fr));
+	gap: var(--size-2-1);
+}
+
+.plc-icon-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 1;
+	padding: 0;
+	font-size: var(--font-ui-medium);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--radius-s);
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.plc-icon-cell:hover {
+	background: var(--background-modifier-hover);
+}
+
+.plc-icon-cell.is-current {
+	border-color: var(--interactive-accent);
+}
+
+.plc-icon-empty {
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+	padding: var(--size-4-2);
+}
+
+.plc-icon-footer {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--size-4-2);
 }

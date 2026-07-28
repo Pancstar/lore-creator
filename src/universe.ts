@@ -9,6 +9,8 @@ export interface Calendar {
 	calendarUnit: string;
 	/** Zero point of the in-universe calendar, expressed as a `time` value. */
 	calendarEpoch: number;
+	/** Days in one in-universe unit — used to place dates inside a year. */
+	calendarDays: number;
 	/** Earth year the epoch corresponds to. Null disables conversion. */
 	earthEpoch: number | null;
 	/** Earth years spanned by one in-universe unit. */
@@ -19,6 +21,7 @@ export const DEFAULT_CALENDAR: Calendar = {
 	calendarName: "",
 	calendarUnit: "",
 	calendarEpoch: 0,
+	calendarDays: 365,
 	earthEpoch: null,
 	earthRatio: 1,
 };
@@ -67,6 +70,7 @@ export class Universe {
 			calendarName: String(frontmatter["calendar-name"] ?? ""),
 			calendarUnit: String(frontmatter["calendar-unit"] ?? ""),
 			calendarEpoch: asNumber(frontmatter["calendar-epoch"], 0),
+			calendarDays: asNumber(frontmatter["calendar-days"], 365),
 			earthEpoch: asOptionalNumber(frontmatter["earth-epoch"]),
 			earthRatio: asNumber(frontmatter["earth-ratio"], 1),
 		};
@@ -81,6 +85,7 @@ export class Universe {
 			if (calendar.calendarName !== undefined) frontmatter["calendar-name"] = calendar.calendarName;
 			if (calendar.calendarUnit !== undefined) frontmatter["calendar-unit"] = calendar.calendarUnit;
 			if (calendar.calendarEpoch !== undefined) frontmatter["calendar-epoch"] = calendar.calendarEpoch;
+			if (calendar.calendarDays !== undefined) frontmatter["calendar-days"] = calendar.calendarDays;
 			if (calendar.earthEpoch !== undefined) frontmatter["earth-epoch"] = calendar.earthEpoch;
 			if (calendar.earthRatio !== undefined) frontmatter["earth-ratio"] = calendar.earthRatio;
 		});
