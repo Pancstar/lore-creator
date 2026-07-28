@@ -209,6 +209,41 @@ const en: Strings = {
 	"nav.none": "This note has no connection in that direction.",
 	"command.goNext": "Go to the next fragment",
 	"command.goPrev": "Go to the previous fragment",
+
+	"laws.universe": "Universe-wide",
+	"laws.local": "Entity-specific",
+	"laws.allTimelines": "All timelines",
+	"laws.onlyIn": "Only in: {0}",
+	"laws.appliesTo": "Applies to: {0}",
+	"laws.boundBy": "Bound by: {0}",
+	"laws.brokenBy": "Broken by: {0}",
+	"laws.empty.title": "No laws yet",
+	"laws.empty.body":
+		"Create a note of type Law. Set scope to universe for physics that holds everywhere, or local for a rule that only applies to certain places or species.",
+
+	"drafts.unassigned": "Unfiled",
+	"drafts.promotedTo": "Promoted to {0}",
+	"drafts.openSplit": "Open beside this note",
+	"drafts.openTab": "Open in a tab",
+	"drafts.promote": "Promote to a real note",
+	"drafts.empty.title": "No drafts yet",
+	"drafts.empty.body":
+		"Create a note of type Draft for ideas you are not ready to place. Nothing here appears on a timeline until you promote it.",
+
+	"promote.title": "Promote draft",
+	"promote.type": "Becomes",
+	"promote.name": "Name",
+	"promote.folder": "Folder",
+	"promote.folder.desc": "Defaults to the type's folder. Change it to put the note anywhere you like.",
+	"promote.body": "The draft's text",
+	"promote.body.desc": "Whether the draft keeps its text or hands it over.",
+	"promote.body.keep": "Copy it — leave the draft as it is",
+	"promote.body.move": "Move it — leave a pointer in the draft",
+	"promote.confirm": "Promote",
+	"promote.done": "Promoted to {0}",
+	"promote.failed": "Could not promote the draft — see the console for details.",
+	"promote.movedNotice": "This draft's text moved to [[{0}]].",
+	"command.promote": "Promote this draft",
 };
 
 const tr: Strings = {
@@ -417,6 +452,41 @@ const tr: Strings = {
 	"nav.none": "Bu notun o yönde bağlantısı yok.",
 	"command.goNext": "Sonraki parçaya git",
 	"command.goPrev": "Önceki parçaya git",
+
+	"laws.universe": "Evren geneli",
+	"laws.local": "Varlığa özel",
+	"laws.allTimelines": "Tüm zaman çizgileri",
+	"laws.onlyIn": "Sadece: {0}",
+	"laws.appliesTo": "Geçerli olduğu: {0}",
+	"laws.boundBy": "Tabi olan: {0}",
+	"laws.brokenBy": "Çiğneyen: {0}",
+	"laws.empty.title": "Henüz yasa yok",
+	"laws.empty.body":
+		"Yasa türünde bir not oluştur. Her yerde geçerli fizik için kapsamı universe, sadece belirli mekân ya da türlere işleyen kural için local yap.",
+
+	"drafts.unassigned": "Bağlantısız",
+	"drafts.promotedTo": "{0} olarak terfi edildi",
+	"drafts.openSplit": "Bu notun yanında aç",
+	"drafts.openTab": "Sekmede aç",
+	"drafts.promote": "Gerçek nota terfi et",
+	"drafts.empty.title": "Henüz taslak yok",
+	"drafts.empty.body":
+		"Yerini henüz bulmamış fikirler için Taslak türünde not oluştur. Buradakiler terfi edilene kadar zaman çizgisine çıkmaz.",
+
+	"promote.title": "Taslağı terfi et",
+	"promote.type": "Şuna dönüşsün",
+	"promote.name": "Ad",
+	"promote.folder": "Klasör",
+	"promote.folder.desc": "Türün klasörü önerilir. İstediğin yere koymak için değiştir.",
+	"promote.body": "Taslağın metni",
+	"promote.body.desc": "Taslak metnini kendinde tutsun mu, devretsin mi.",
+	"promote.body.keep": "Kopyalansın — taslak olduğu gibi kalsın",
+	"promote.body.move": "Taşınsın — taslakta bağlantı kalsın",
+	"promote.confirm": "Terfi et",
+	"promote.done": "{0} olarak terfi edildi",
+	"promote.failed": "Taslak terfi edilemedi — ayrıntı için konsola bak.",
+	"promote.movedNotice": "Bu taslağın metni [[{0}]] dosyasına taşındı.",
+	"command.promote": "Bu taslağı terfi et",
 };
 
 const TABLES: Record<Exclude<Language, "auto">, Strings> = { en, tr };

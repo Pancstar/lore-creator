@@ -1,27 +1,13 @@
 import { View, WorkspaceLeaf } from "obsidian";
 import { LoreView } from "./base";
 import { TimelineView, VIEW_TYPE_TIMELINE } from "../timeline/view";
+import { LawsView, VIEW_TYPE_LAWS } from "./laws";
+import { DraftsView, VIEW_TYPE_DRAFTS } from "./drafts";
 import type LorePlugin from "../main";
 
-export const VIEW_TYPE_LAWS = "plc-laws";
-export const VIEW_TYPE_DRAFTS = "plc-drafts";
 export const VIEW_TYPE_DASHBOARD = "plc-dashboard";
 
-export { VIEW_TYPE_TIMELINE };
-
-export class LawsView extends LoreView {
-	readonly viewType = VIEW_TYPE_LAWS;
-	readonly titleKey = "view.laws";
-	readonly hintKey = "view.laws.hint";
-	readonly icon = "scroll";
-}
-
-export class DraftsView extends LoreView {
-	readonly viewType = VIEW_TYPE_DRAFTS;
-	readonly titleKey = "view.drafts";
-	readonly hintKey = "view.drafts.hint";
-	readonly icon = "lightbulb";
-}
+export { VIEW_TYPE_TIMELINE, VIEW_TYPE_LAWS, VIEW_TYPE_DRAFTS };
 
 export class DashboardView extends LoreView {
 	readonly viewType = VIEW_TYPE_DASHBOARD;
@@ -75,4 +61,4 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 	},
 ];
 
-export { LoreView, TimelineView };
+export { LoreView, TimelineView, LawsView, DraftsView };

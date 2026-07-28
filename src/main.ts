@@ -9,9 +9,17 @@ import { PickTargetModal } from "./modals/pickTarget";
 import { VersionStore } from "./versions/store";
 import { VersionSetStore } from "./versions/sets";
 import { NewNoteModal } from "./modals/newNote";
+import { PromoteModal } from "./modals/promote";
 import { VersionMenuModal } from "./modals/versionMenu";
 import { VersionSetsModal } from "./modals/versionSets";
-import { LoreView, TimelineView, VIEW_DEFINITIONS, VIEW_TYPE_TIMELINE } from "./views";
+import {
+	DraftsView,
+	LawsView,
+	LoreView,
+	TimelineView,
+	VIEW_DEFINITIONS,
+	VIEW_TYPE_TIMELINE,
+} from "./views";
 
 export default class LorePlugin extends Plugin {
 	settings: LoreSettings = { ...DEFAULT_SETTINGS };
@@ -80,6 +88,19 @@ export default class LorePlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "promote-draft",
+			name: this.i18n.t("command.promote"),
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file) return false;
+				const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+				if (frontmatter?.type !== "draft") return false;
+				if (!checking) new PromoteModal(this.app, this, file).open();
+				return true;
+			},
+		});
+
+		this.addCommand({
 			id: "go-next",
 			name: this.i18n.t("command.goNext"),
 			checkCallback: (checking) => this.navigateCommand(checking, "next"),
@@ -145,9 +166,10 @@ export default class LorePlugin extends Plugin {
 	}
 
 	private onMetadataChanged(file: TFile) {
-		// Any frontmatter edit can move a note on the timeline, so the drawing is
-		// rebuilt regardless of which note changed.
-		this.refreshTimelines();
+		// Any frontmatter edit can move a note on the timeline or change which
+		// laws and drafts it relates to, so the lists are rebuilt regardless of
+		// which note changed.
+		this.refreshViews();
 
 		if (this.types.isRegistryFile(file)) {
 			this.types.invalidate();
@@ -186,7 +208,9 @@ export default class LorePlugin extends Plugin {
 		for (const definition of VIEW_DEFINITIONS) {
 			for (const leaf of this.app.workspace.getLeavesOfType(definition.type)) {
 				const view = leaf.view;
-				if (view instanceof LoreView) view.render();
+				if (view instanceof LoreView || view instanceof LawsView || view instanceof DraftsView) {
+					view.render();
+				}
 			}
 		}
 		this.refreshTimelines();
