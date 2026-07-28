@@ -1,6 +1,7 @@
-import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
+import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { VersionSetsModal } from "../modals/versionSets";
+import { LaneEditModal } from "../modals/laneEdit";
 import { TimelineModel, TimelineDefinition } from "./model";
 import {
 	AXIS_HEIGHT,
@@ -303,14 +304,30 @@ export class TimelineView extends ItemView {
 				}),
 			);
 
+			// The unassigned and untimed lanes are drawn by the plugin rather than
+			// declared by the author, so there is nothing to rename.
+			const editable = lane.id.length > 0 && !lane.untimed;
+
 			const label = svgEl("text", {
 				x: LEFT_GUTTER - 16,
 				y: lane.y + lane.height / 2,
-				class: "plc-lane-label",
+				class: `plc-lane-label${editable ? " is-editable" : ""}`,
 				"text-anchor": "end",
 				"dominant-baseline": "middle",
 			});
 			label.textContent = lane.name;
+
+			if (editable) {
+				const title = svgEl("title");
+				title.textContent = this.plugin.i18n.t("lane.hint");
+				label.appendChild(title);
+
+				label.addEventListener("click", (event) => {
+					event.stopPropagation();
+					this.editLane(lane);
+				});
+			}
+
 			group.appendChild(label);
 		}
 
@@ -484,6 +501,28 @@ export class TimelineView extends ItemView {
 		}
 
 		return group;
+	}
+
+	/** Opens the rename dialog for a lane, gathering the notes it holds first. */
+	private editLane(lane: Lane) {
+		const definition = this.model.definitions().find((entry) => entry.id === this.timelineId);
+		if (!definition) {
+			new Notice(this.plugin.i18n.t("lane.noTimelineNote"));
+			return;
+		}
+
+		const members = (this.layout?.placed ?? [])
+			.filter((entry) => entry.node.flow === lane.id)
+			.map((entry) => entry.node.file);
+
+		new LaneEditModal(
+			this.app,
+			this.plugin,
+			definition.file,
+			{ id: lane.id, name: lane.name },
+			members,
+			() => this.render(),
+		).open();
 	}
 
 	private async openNode(file: TFile, event: MouseEvent) {

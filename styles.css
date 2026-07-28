@@ -434,6 +434,15 @@ button.plc-badge {
 	font-weight: 600;
 }
 
+.plc-lane-label.is-editable {
+	cursor: text;
+}
+
+.plc-lane-label.is-editable:hover {
+	fill: var(--text-accent);
+	text-decoration: underline;
+}
+
 .plc-axis-line {
 	stroke: var(--background-modifier-border);
 	stroke-width: 1;
