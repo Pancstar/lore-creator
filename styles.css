@@ -304,6 +304,95 @@ button.plc-badge {
 	font-size: 13px;
 }
 
+.plc-node-versions {
+	fill: var(--interactive-accent);
+}
+
+/* --- Versions -------------------------------------------------------- */
+
+.plc-confirm-details {
+	margin: var(--size-4-2) 0;
+	padding-left: var(--size-4-4);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-family: var(--font-monospace);
+}
+
+.plc-confirm-details li {
+	margin-bottom: var(--size-2-1);
+	word-break: break-all;
+}
+
+.plc-version-list {
+	margin: var(--size-4-3) 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	overflow: hidden;
+}
+
+.plc-version-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.plc-version-row:last-child {
+	border-bottom: none;
+}
+
+.plc-version-row.is-active {
+	background: var(--background-secondary);
+}
+
+.plc-version-mark {
+	flex: 0 0 auto;
+	width: 1.2em;
+	color: var(--interactive-accent);
+}
+
+.plc-version-text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.plc-version-label {
+	color: var(--text-normal);
+	font-weight: var(--font-medium);
+}
+
+.plc-version-note {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.plc-version-badge {
+	display: inline-block;
+	margin-top: 0.2em;
+	padding: 0 0.5em;
+	border-radius: var(--radius-s);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: var(--font-ui-smaller);
+}
+
+.plc-version-actions {
+	flex: 0 0 auto;
+	display: flex;
+	gap: var(--size-2-1);
+}
+
+button.plc-badge-version {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+}
+
+button.plc-badge-version:hover {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
 /* --- Icon picker ----------------------------------------------------- */
 
 .plc-icon-picker .plc-icon-tabs {

@@ -8,6 +8,7 @@ export interface LoreSettings {
 	systemFolder: string;
 	versionsFolder: string;
 	templatesFolder: string;
+	versionSetsFile: string;
 	showEarthTime: boolean;
 }
 
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: LoreSettings = {
 	systemFolder: "_Sistem",
 	versionsFolder: "_Sürümler",
 	templatesFolder: "_Şablonlar",
+	versionSetsFile: "_Sistem/SÜRÜM SETLERİ.md",
 	showEarthTime: true,
 };
 
@@ -92,6 +94,16 @@ export class LoreSettingTab extends PluginSettingTab {
 			() => this.plugin.settings.templatesFolder,
 			(value) => {
 				this.plugin.settings.templatesFolder = value;
+			},
+		);
+
+		this.addPathSetting(
+			t("settings.versionSetsFile"),
+			t("settings.versionSetsFile.desc"),
+			DEFAULT_SETTINGS.versionSetsFile,
+			() => this.plugin.settings.versionSetsFile,
+			(value) => {
+				this.plugin.settings.versionSetsFile = value;
 			},
 		);
 

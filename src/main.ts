@@ -4,7 +4,11 @@ import { I18n } from "./i18n";
 import { Universe } from "./universe";
 import { TypeRegistry } from "./types";
 import { Banner } from "./banner";
+import { VersionStore } from "./versions/store";
+import { VersionSetStore } from "./versions/sets";
 import { NewNoteModal } from "./modals/newNote";
+import { VersionMenuModal } from "./modals/versionMenu";
+import { VersionSetsModal } from "./modals/versionSets";
 import { LoreView, TimelineView, VIEW_DEFINITIONS, VIEW_TYPE_TIMELINE } from "./views";
 
 export default class LorePlugin extends Plugin {
@@ -13,6 +17,8 @@ export default class LorePlugin extends Plugin {
 	universe!: Universe;
 	types!: TypeRegistry;
 	banner!: Banner;
+	versions!: VersionStore;
+	versionSets!: VersionSetStore;
 
 	get language(): "tr" | "en" {
 		return this.i18n.current;
@@ -27,6 +33,8 @@ export default class LorePlugin extends Plugin {
 
 		this.universe = new Universe(this.app, this.settings.universeFile);
 		this.types = new TypeRegistry(this.app, this.registryPath);
+		this.versions = new VersionStore(this.app, this.settings.versionsFolder);
+		this.versionSets = new VersionSetStore(this.app, this.versions, this.settings.versionSetsFile);
 		this.banner = new Banner(this);
 		this.applyLanguage();
 
@@ -48,6 +56,23 @@ export default class LorePlugin extends Plugin {
 			id: "new-lore-note",
 			name: this.i18n.t("command.newNote"),
 			callback: () => new NewNoteModal(this.app, this).open(),
+		});
+
+		this.addCommand({
+			id: "note-versions",
+			name: this.i18n.t("command.versions"),
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file) return false;
+				if (!checking) new VersionMenuModal(this.app, this, file).open();
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "version-sets",
+			name: this.i18n.t("command.versionSets"),
+			callback: () => new VersionSetsModal(this.app, this).open(),
 		});
 
 		this.addSettingTab(new LoreSettingTab(this.app, this));
@@ -100,6 +125,8 @@ export default class LorePlugin extends Plugin {
 		await this.saveData(this.settings);
 		this.universe.setPath(this.settings.universeFile);
 		this.types.setPath(this.registryPath);
+		this.versions.setFolder(this.settings.versionsFolder);
+		this.versionSets.setPath(this.settings.versionSetsFile);
 		this.applyLanguage();
 		this.refreshViews();
 		this.banner.refreshAll();

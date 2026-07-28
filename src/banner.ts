@@ -2,6 +2,7 @@ import { MarkdownView, Notice, TFile, setIcon } from "obsidian";
 import type LorePlugin from "./main";
 import { IconChoice, IconPickerModal } from "./modals/iconPicker";
 import { TimePickerModal, TimeValue } from "./modals/timePicker";
+import { VersionMenuModal } from "./modals/versionMenu";
 import { isTimePrecision } from "./time";
 
 const BANNER_CLASS = "plc-banner";
@@ -124,12 +125,19 @@ export class Banner {
 		statusButton.addEventListener("click", () => void this.cycleStatus(file, status));
 
 		const version = asString(frontmatter.version);
+		const versionName = asString(frontmatter["version-name"]);
 		if (version) {
-			rowEl.createEl("span", { cls: "plc-badge plc-badge-version", text: version });
+			const versionButton = rowEl.createEl("button", {
+				cls: "plc-badge plc-badge-version",
+				text: versionName ? `${version} · ${versionName}` : version,
+				attr: { "aria-label": this.plugin.i18n.t("version.title") },
+			});
+			versionButton.addEventListener("click", () =>
+				new VersionMenuModal(this.plugin.app, this.plugin, file).open(),
+			);
 		}
 
-		const versionOf = frontmatter["version-of"];
-		if (versionOf) {
+		if (frontmatter["version-of"]) {
 			rowEl.createEl("span", {
 				cls: "plc-badge plc-badge-archived",
 				text: this.plugin.i18n.t("banner.oldVersion"),

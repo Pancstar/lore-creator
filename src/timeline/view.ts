@@ -1,5 +1,6 @@
 import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
+import { VersionSetsModal } from "../modals/versionSets";
 import { TimelineModel, TimelineDefinition } from "./model";
 import {
 	AXIS_HEIGHT,
@@ -126,6 +127,9 @@ export class TimelineView extends ItemView {
 		const spacer = this.toolbarEl.createDiv({ cls: "plc-timeline-spacer" });
 		spacer.setAttr("aria-hidden", "true");
 
+		this.addToolbarButton("layers", t("timeline.versions"), () =>
+			new VersionSetsModal(this.app, this.plugin).open(),
+		);
 		this.addToolbarButton("zoom-out", t("timeline.zoomOut"), () => this.applyZoom(this.zoom / 1.25));
 		this.addToolbarButton("zoom-in", t("timeline.zoomIn"), () => this.applyZoom(this.zoom * 1.25));
 		this.addToolbarButton("maximize", t("timeline.fit"), () => this.fitToView());
@@ -362,9 +366,30 @@ export class TimelineView extends ItemView {
 		label.textContent = node.title;
 		group.appendChild(label);
 
+		// A small mark on fragments that have alternatives, so which parts of the
+		// story are still being argued with is visible without opening anything.
+		const versioned = this.plugin.versions.hasMultiple(node.file);
+		if (versioned) {
+			group.appendChild(
+				svgEl("circle", {
+					cx: entry.width - 9,
+					cy: 9,
+					r: 3.5,
+					class: "plc-node-versions",
+				}),
+			);
+		}
+
 		const timeText = node.timeLabel || (node.time === null ? t("timeline.untimed") : String(node.time));
 		const title = svgEl("title");
-		title.textContent = `${node.title}\n${timeText}\n${t(`status.${node.status}`)}`;
+		title.textContent = [
+			node.title,
+			timeText,
+			t(`status.${node.status}`),
+			versioned ? t("timeline.hasVersions") : "",
+		]
+			.filter((line) => line.length > 0)
+			.join("\n");
 		group.appendChild(title);
 
 		group.addEventListener("click", (event) => {
