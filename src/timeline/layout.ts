@@ -79,18 +79,6 @@ function estimateWidth(node: TimelineNode): number {
 	return Math.max(MIN_NODE_WIDTH, node.title.length * CHAR_WIDTH + iconSpace + BOX_PADDING * 2);
 }
 
-/** Picks a 1/2/5×10ⁿ step so axis labels land on values people recognise. */
-function niceStep(span: number, targetTicks: number): number {
-	if (span <= 0) return 1;
-	const rough = span / Math.max(1, targetTicks);
-	const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
-	const normalised = rough / magnitude;
-
-	if (normalised <= 1) return magnitude;
-	if (normalised <= 2) return 2 * magnitude;
-	if (normalised <= 5) return 5 * magnitude;
-	return 10 * magnitude;
-}
 
 /**
  * Assigns nodes to lanes and rows. Within a lane, boxes that would overlap get
@@ -120,7 +108,6 @@ export function computeLayout(graph: TimelineGraph, options: LayoutOptions): Lay
 	const times = timed.flatMap((node) => [node.time as number, node.timeEnd ?? (node.time as number)]);
 	const minTime = times.length > 0 ? Math.min(...times) : 0;
 	const maxTime = times.length > 0 ? Math.max(...times) : 0;
-	const span = maxTime - minTime;
 
 	const scale = (value: number) => LEFT_GUTTER + CANVAS_PADDING + (value - minTime) * options.pixelsPerUnit;
 
@@ -198,14 +185,15 @@ export function computeLayout(graph: TimelineGraph, options: LayoutOptions): Lay
 		cursorY += NODE_HEIGHT + LANE_PADDING * 2;
 	}
 
-	const ticks: AxisTick[] = [];
-	if (timed.length > 0) {
-		const step = niceStep(span, 8);
-		const first = Math.floor(minTime / step) * step;
-		for (let value = first; value <= maxTime + step; value += step) {
-			ticks.push({ value, x: scale(value), label: options.formatTick(value) });
-		}
-	}
+	// The axis marks the moments the story actually has, not regular calendar
+	// intervals. A column and the events in it are then the same thing, so moving
+	// an event moves its date with it.
+	const moments = [...new Set(timed.map((node) => node.time as number))].sort((a, b) => a - b);
+	const ticks: AxisTick[] = moments.map((value) => ({
+		value,
+		x: scale(value),
+		label: options.formatTick(value),
+	}));
 
 	const rightMost = placed.reduce((max, entry) => Math.max(max, entry.x + entry.width), 0);
 	const tickRight = ticks.reduce((max, tick) => Math.max(max, tick.x), 0);

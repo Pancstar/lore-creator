@@ -2,7 +2,7 @@ import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { VersionSetsModal } from "../modals/versionSets";
 import { LaneEditModal } from "../modals/laneEdit";
-import { TimelineModel, TimelineDefinition } from "./model";
+import { TimelineModel, TimelineDefinition, TimelineNode } from "./model";
 import {
 	AXIS_HEIGHT,
 	CANVAS_PADDING,
@@ -24,6 +24,8 @@ const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
 const MIN_DENSITY = 0.1;
 const MAX_DENSITY = 20;
+/** Horizontal room a date label needs before the next one may be drawn. */
+const MIN_LABEL_GAP = 64;
 /** Pixels of travel before a press counts as a pan rather than a click. */
 const DRAG_THRESHOLD = 4;
 
@@ -37,6 +39,8 @@ interface NodeDrag {
 	group: SVGGElement;
 	/** Notes sharing this exact moment, carried along to keep them simultaneous. */
 	companions: DragCompanion[];
+	/** The axis column for the moment being moved, carried along with it. */
+	tick: { el: SVGGElement; label: string } | null;
 	guide: SVGLineElement | null;
 	startX: number;
 	startY: number;
@@ -81,6 +85,7 @@ export class TimelineView extends ItemView {
 	private panned = false;
 	private drag: NodeDrag | null = null;
 	private nodeEls = new Map<string, SVGGElement>();
+	private tickEls = new Map<number, SVGGElement>();
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -246,7 +251,9 @@ export class TimelineView extends ItemView {
 			pixelsPerUnit: autoPixelsPerUnit(span) * this.plugin.settings.timeDensity,
 			unnamedFlowLabel: t("timeline.unnamedFlow"),
 			untimedLabel: t("timeline.untimed"),
-			formatTick: (value) => this.plugin.universe.formatTime(Math.round(value), calendar),
+			// A moment is labelled with the author's own wording when they gave it
+			// one, since that reads better than anything derived from the number.
+			formatTick: (value) => this.momentLabel(value, graph.nodes),
 		});
 
 		this.drawSvg(this.layout);
@@ -336,6 +343,7 @@ export class TimelineView extends ItemView {
 
 	private drawAxis(scene: SVGGElement, layout: Layout) {
 		const group = svgEl("g", { class: "plc-axis" });
+		this.tickEls.clear();
 
 		group.appendChild(
 			svgEl("line", {
@@ -347,8 +355,14 @@ export class TimelineView extends ItemView {
 			}),
 		);
 
+		// Moments can sit close enough that their labels would collide. The line
+		// still marks every one; only the text gives way.
+		let lastLabelX = Number.NEGATIVE_INFINITY;
+
 		for (const tick of layout.ticks) {
-			group.appendChild(
+			const tickEl = svgEl("g", { class: "plc-tick" });
+
+			tickEl.appendChild(
 				svgEl("line", {
 					x1: tick.x,
 					y1: AXIS_HEIGHT,
@@ -358,14 +372,20 @@ export class TimelineView extends ItemView {
 				}),
 			);
 
-			const label = svgEl("text", {
-				x: tick.x,
-				y: AXIS_HEIGHT - 10,
-				class: "plc-axis-label",
-				"text-anchor": "middle",
-			});
-			label.textContent = tick.label;
-			group.appendChild(label);
+			if (tick.x - lastLabelX >= MIN_LABEL_GAP) {
+				const label = svgEl("text", {
+					x: tick.x,
+					y: AXIS_HEIGHT - 10,
+					class: "plc-axis-label",
+					"text-anchor": "middle",
+				});
+				label.textContent = tick.label;
+				tickEl.appendChild(label);
+				lastLabelX = tick.x;
+			}
+
+			this.tickEls.set(tick.value, tickEl);
+			group.appendChild(tickEl);
 		}
 
 		scene.appendChild(group);
@@ -576,10 +596,15 @@ export class TimelineView extends ItemView {
 	private beginDrag(entry: PlacedNode, group: SVGGElement, event: PointerEvent) {
 		const point = this.toScene(event.clientX, event.clientY);
 
+		const tickEl = entry.node.time === null ? undefined : this.tickEls.get(entry.node.time);
+
 		this.drag = {
 			entry,
 			group,
 			companions: this.companionsOf(entry),
+			tick: tickEl
+				? { el: tickEl, label: tickEl.querySelector("text")?.textContent ?? "" }
+				: null,
 			guide: null,
 			startX: event.clientX,
 			startY: event.clientY,
@@ -637,7 +662,41 @@ export class TimelineView extends ItemView {
 		}
 
 		this.updateGuide(drag, snappedX);
+		this.moveTick(drag, deltaX, intoUntimed);
 		this.showDragHint(drag, event, intoUntimed);
+	}
+
+	/**
+	 * The axis marks moments, so the date column belongs to the events standing
+	 * in it and travels with them while they are being moved.
+	 */
+	private moveTick(drag: NodeDrag, deltaX: number, intoUntimed: boolean) {
+		const tick = drag.tick;
+		if (!tick) return;
+
+		// With alt held only one event leaves the moment, so the moment stays put.
+		const follows = !drag.solo && !intoUntimed;
+		tick.el.setAttribute("transform", follows ? `translate(${deltaX}, 0)` : "translate(0, 0)");
+
+		const label = tick.el.querySelector("text");
+		if (!label) return;
+
+		label.textContent =
+			follows && drag.time !== null
+				? this.plugin.universe.formatTime(
+						Number(drag.time.toFixed(4)),
+						this.plugin.universe.readCalendar(),
+					)
+				: tick.label;
+	}
+
+	private momentLabel(value: number, nodes: TimelineNode[]): string {
+		const named = nodes.find((node) => node.time === value && node.timeLabel.length > 0);
+		if (named) return named.timeLabel;
+		return this.plugin.universe.formatTime(
+			Number(value.toFixed(4)),
+			this.plugin.universe.readCalendar(),
+		);
 	}
 
 	private xForTime(layout: Layout, time: number): number {

@@ -456,8 +456,19 @@ button.plc-badge {
 }
 
 .plc-axis-label {
-	fill: var(--text-faint);
+	fill: var(--text-muted);
 	font-size: 11px;
+}
+
+/* The column being dragged leads the eye, so it is the one that stands out. */
+.plc-tick[transform]:not([transform="translate(0, 0)"]) .plc-axis-label {
+	fill: var(--interactive-accent);
+	font-weight: 600;
+}
+
+.plc-tick[transform]:not([transform="translate(0, 0)"]) .plc-axis-grid {
+	stroke: var(--interactive-accent);
+	opacity: 0.9;
 }
 
 .plc-edge {
