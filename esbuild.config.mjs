@@ -3,7 +3,7 @@ import process from "process";
 import builtins from "builtin-modules";
 
 const banner = `/*
-PancstaR Lore Creator — bundled output.
+Lore Creator — bundled output.
 Do not edit directly; edit the TypeScript sources in src/ instead.
 */
 `;

@@ -146,7 +146,7 @@ export class PromoteModal extends Modal {
 			new Notice(t("promote.done", title));
 			this.close();
 		} catch (error) {
-			console.error("PancstaR Lore Creator: could not promote draft", error);
+			console.error("Lore Creator: could not promote draft", error);
 			new Notice(t("promote.failed"));
 		}
 	}

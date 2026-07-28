@@ -3,15 +3,15 @@ export type Language = "auto" | "en" | "tr";
 type Strings = Record<string, string>;
 
 const en: Strings = {
-	"plugin.name": "PancstaR Lore Creator",
-	"plugin.loaded": "PancstaR Lore Creator loaded",
+	"plugin.name": "Lore Creator",
+	"plugin.loaded": "Lore Creator loaded",
 
 	"view.timeline": "Timeline",
 	"view.laws": "Laws",
 	"view.drafts": "Drafts",
 	"view.dashboard": "Dashboard",
 
-	"settings.title": "PancstaR Lore Creator",
+	"settings.title": "Lore Creator",
 	"settings.language": "Language",
 	"settings.language.desc": "Interface language. 'Automatic' follows Obsidian's own language.",
 	"settings.language.auto": "Automatic",
@@ -308,7 +308,7 @@ const en: Strings = {
 	"setup.done": "Created {0} files",
 	"setup.failed": "Setup failed — see the console for details.",
 	"setup.untitled": "Untitled universe",
-	"setup.offer": "PancstaR Lore Creator: click here to set up this vault.",
+	"setup.offer": "Lore Creator: click here to set up this vault.",
 	"setup.run": "Vault structure",
 	"setup.run.desc": "Create any missing folders, templates and the type registry.",
 	"setup.open": "Set up",
@@ -323,15 +323,15 @@ const en: Strings = {
 };
 
 const tr: Strings = {
-	"plugin.name": "PancstaR Lore Creator",
-	"plugin.loaded": "PancstaR Lore Creator yüklendi",
+	"plugin.name": "Lore Creator",
+	"plugin.loaded": "Lore Creator yüklendi",
 
 	"view.timeline": "Zaman Çizgisi",
 	"view.laws": "Yasalar",
 	"view.drafts": "Taslaklar",
 	"view.dashboard": "Pano",
 
-	"settings.title": "PancstaR Lore Creator",
+	"settings.title": "Lore Creator",
 	"settings.language": "Dil",
 	"settings.language.desc": "Arayüz dili. 'Otomatik' Obsidian'ın kendi dilini takip eder.",
 	"settings.language.auto": "Otomatik",
@@ -627,7 +627,7 @@ const tr: Strings = {
 	"setup.done": "{0} dosya oluşturuldu",
 	"setup.failed": "Kurulum başarısız oldu — ayrıntı için konsola bak.",
 	"setup.untitled": "Adsız evren",
-	"setup.offer": "PancstaR Lore Creator: vault'u kurmak için buraya tıkla.",
+	"setup.offer": "Lore Creator: vault'u kurmak için buraya tıkla.",
 	"setup.run": "Vault yapısı",
 	"setup.run.desc": "Eksik klasörleri, şablonları ve tür kaydını oluştur.",
 	"setup.open": "Kur",

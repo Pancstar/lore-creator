@@ -197,7 +197,7 @@ export class VersionMenuModal extends Modal {
 
 	private reportFailure(error: unknown) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		console.error("PancstaR Lore Creator: version operation failed", error);
+		console.error("Lore Creator: version operation failed", error);
 
 		if (error instanceof VersionError) {
 			new Notice(t("version.error.exists", error.message));

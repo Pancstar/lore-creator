@@ -1,5 +1,5 @@
 {
-	"name": "pancstar-lore-creator",
+	"name": "lore-creator",
 	"version": "0.1.0",
 	"description": "Design fictional universes: branching timelines, versioned story fragments, custom calendars and structured worldbuilding entities.",
 	"main": "main.js",

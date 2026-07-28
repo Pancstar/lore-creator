@@ -146,7 +146,7 @@ export class SetupModal extends Modal {
 
 			this.close();
 		} catch (error) {
-			console.error("PancstaR Lore Creator: setup failed", error);
+			console.error("Lore Creator: setup failed", error);
 			new Notice(t("setup.failed"));
 		}
 	}

@@ -131,7 +131,7 @@ export class NewNoteModal extends Modal {
 			await this.app.workspace.getLeaf(false).openFile(file);
 			this.close();
 		} catch (error) {
-			console.error("PancstaR Lore Creator: could not create note", error);
+			console.error("Lore Creator: could not create note", error);
 			new Notice(t("new.failed"));
 		}
 	}

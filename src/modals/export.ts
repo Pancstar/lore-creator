@@ -161,7 +161,7 @@ export class ExportModal extends Modal {
 			new Notice(t("export.done", String(entries.length)));
 			this.close();
 		} catch (error) {
-			console.error("PancstaR Lore Creator: export failed", error);
+			console.error("Lore Creator: export failed", error);
 			new Notice(t("export.failed"));
 		}
 	}

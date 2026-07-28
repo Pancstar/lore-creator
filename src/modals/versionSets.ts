@@ -113,7 +113,7 @@ export class VersionSetsModal extends Modal {
 			new Notice(t("sets.captured", name));
 			this.renderBody();
 		} catch (error) {
-			console.error("PancstaR Lore Creator: could not capture version set", error);
+			console.error("Lore Creator: could not capture version set", error);
 			new Notice(t("version.error.generic"));
 		}
 	}
@@ -149,7 +149,7 @@ export class VersionSetsModal extends Modal {
 		const result = await this.plugin.versionSets.apply(plan);
 
 		if (result.failed) {
-			console.error("PancstaR Lore Creator: applying set stopped early", result.error);
+			console.error("Lore Creator: applying set stopped early", result.error);
 			new Notice(
 				t("sets.partial", String(result.applied), result.failed.active.basename),
 				8000,
@@ -184,7 +184,7 @@ export class VersionSetsModal extends Modal {
 			new Notice(t("sets.deleted"));
 			this.renderBody();
 		} catch (error) {
-			console.error("PancstaR Lore Creator: could not delete version set", error);
+			console.error("Lore Creator: could not delete version set", error);
 			new Notice(t("version.error.generic"));
 		}
 	}
