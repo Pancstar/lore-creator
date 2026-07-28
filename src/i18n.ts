@@ -124,6 +124,11 @@ const en: Strings = {
 	"timeline.noNotes.title": "This timeline is empty",
 	"timeline.noNotes.body": "No note carries timeline: {0} yet. Set it on a note and give the note a time.",
 	"timeline.versions": "Version sets",
+	"timeline.wider": "Spread the time axis",
+	"timeline.narrower": "Compress the time axis",
+	"timeline.lock": "Lock — stop notes being moved",
+	"timeline.unlock": "Unlock — allow notes to be moved",
+	"timeline.drag.blocked": "Drag onto a lane to give this a time",
 	"timeline.hasVersions": "has other versions",
 
 	"common.cancel": "Cancel",
@@ -444,6 +449,11 @@ const tr: Strings = {
 	"timeline.noNotes.title": "Bu zaman çizgisi boş",
 	"timeline.noNotes.body": "Hiçbir not timeline: {0} taşımıyor. Bir nota bunu ata ve zaman ver.",
 	"timeline.versions": "Sürüm setleri",
+	"timeline.wider": "Zaman eksenini genişlet",
+	"timeline.narrower": "Zaman eksenini daralt",
+	"timeline.lock": "Kilitle — notlar taşınamasın",
+	"timeline.unlock": "Kilidi aç — notlar taşınabilsin",
+	"timeline.drag.blocked": "Zaman vermek için bir şeride sürükle",
 	"timeline.hasVersions": "başka sürümleri var",
 
 	"common.cancel": "Vazgeç",

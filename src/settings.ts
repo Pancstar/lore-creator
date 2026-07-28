@@ -14,6 +14,9 @@ export interface LoreSettings {
 	showEarthTime: boolean;
 	minimapPinned: boolean;
 	minimapMode: "wide" | "near";
+	/** Multiplier on the automatic time scale, so the axis can be spread out. */
+	timeDensity: number;
+	timelineLocked: boolean;
 	/** Cleared once the vault has been set up, so the offer is made only once. */
 	setupOffered: boolean;
 }
@@ -34,6 +37,8 @@ export const DEFAULT_SETTINGS: LoreSettings = {
 	showEarthTime: true,
 	minimapPinned: false,
 	minimapMode: "near",
+	timeDensity: 1,
+	timelineLocked: false,
 	setupOffered: false,
 };
 

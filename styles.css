@@ -465,6 +465,42 @@ button.plc-badge {
 	cursor: pointer;
 }
 
+.plc-node.is-draggable {
+	cursor: grab;
+}
+
+.plc-node.is-dragging {
+	cursor: grabbing;
+	opacity: 0.85;
+}
+
+.plc-node.is-dragging .plc-node-box {
+	stroke: var(--interactive-accent);
+	stroke-width: 2;
+}
+
+.plc-drag-hint {
+	position: absolute;
+	z-index: 20;
+	padding: 0.15em 0.5em;
+	border-radius: var(--radius-s);
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.plc-drag-hint.is-blocked {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.plc-timeline-button.is-active {
+	color: var(--interactive-accent);
+}
+
 .plc-node-box {
 	fill: var(--background-primary);
 	stroke: var(--background-modifier-border);

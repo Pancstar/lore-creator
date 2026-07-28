@@ -1,17 +1,33 @@
 import type { FlowDefinition, TimelineEdge, TimelineGraph, TimelineNode } from "./model";
 
-export const NODE_HEIGHT = 34;
-export const MIN_NODE_WIDTH = 120;
-export const ROW_GAP = 14;
-export const LANE_PADDING = 18;
-export const AXIS_HEIGHT = 34;
-export const LEFT_GUTTER = 150;
-export const CANVAS_PADDING = 40;
+export const NODE_HEIGHT = 36;
+export const MIN_NODE_WIDTH = 140;
+export const ROW_GAP = 24;
+export const LANE_PADDING = 28;
+export const AXIS_HEIGHT = 40;
+export const LEFT_GUTTER = 160;
+export const CANVAS_PADDING = 48;
+
+/** Clear space kept between boxes sharing a row, so connectors stay readable. */
+export const NODE_SPACING = 28;
 
 /** Rough advance width per character — enough to size boxes without measuring. */
 const CHAR_WIDTH = 7.4;
 const ICON_WIDTH = 22;
-const BOX_PADDING = 14;
+const BOX_PADDING = 16;
+
+/** Width the timeline aims to fill before the author adjusts the density. */
+const TARGET_SPAN_WIDTH = 1600;
+
+/**
+ * Derives a horizontal scale from the span itself. A universe measured in
+ * decades and one measured in hundreds of thousands of years both have to land
+ * on screen, and no fixed pixels-per-unit manages that for both.
+ */
+export function autoPixelsPerUnit(span: number): number {
+	if (!Number.isFinite(span) || span <= 0) return 60;
+	return TARGET_SPAN_WIDTH / span;
+}
 
 export interface PlacedNode {
 	node: TimelineNode;
@@ -43,6 +59,9 @@ export interface Layout {
 	ticks: AxisTick[];
 	width: number;
 	height: number;
+	/** Earliest time on the canvas, and the scale used — dragging inverts these. */
+	minTime: number;
+	pixelsPerUnit: number;
 }
 
 export interface LayoutOptions {
@@ -83,7 +102,7 @@ function packRows(entries: { node: TimelineNode; x: number; width: number }[]): 
 	const rows: number[] = [];
 
 	for (const entry of entries) {
-		let row = rowEnds.findIndex((end) => entry.x >= end + 12);
+		let row = rowEnds.findIndex((end) => entry.x >= end + NODE_SPACING);
 		if (row === -1) {
 			row = rowEnds.length;
 			rowEnds.push(0);
@@ -167,7 +186,7 @@ export function computeLayout(graph: TimelineGraph, options: LayoutOptions): Lay
 		for (const node of untimed) {
 			const width = estimateWidth(node);
 			placed.push({ node, x, y: cursorY, width, height: NODE_HEIGHT });
-			x += width + 24;
+			x += width + NODE_SPACING;
 		}
 		lanes.push({
 			id: "__untimed",
@@ -198,5 +217,32 @@ export function computeLayout(graph: TimelineGraph, options: LayoutOptions): Lay
 		ticks,
 		width: Math.max(rightMost, tickRight) + CANVAS_PADDING,
 		height: cursorY,
+		minTime,
+		pixelsPerUnit: options.pixelsPerUnit,
 	};
+}
+
+/** Turns a canvas x back into a time, for working out where a drag landed. */
+export function timeAt(layout: Layout, x: number): number {
+	return layout.minTime + (x - LEFT_GUTTER - CANVAS_PADDING) / layout.pixelsPerUnit;
+}
+
+/** The lane a y coordinate falls in, or null when it is between lanes. */
+export function laneAt(layout: Layout, y: number): Lane | null {
+	let closest: Lane | null = null;
+	let bestDistance = Number.POSITIVE_INFINITY;
+
+	for (const lane of layout.lanes) {
+		const top = lane.y - LANE_PADDING;
+		const bottom = lane.y + lane.height + LANE_PADDING;
+		if (y >= top && y <= bottom) return lane;
+
+		const distance = y < top ? top - y : y - bottom;
+		if (distance < bestDistance) {
+			bestDistance = distance;
+			closest = lane;
+		}
+	}
+	// Dragging past the top or bottom edge should still land somewhere sensible.
+	return closest;
 }
