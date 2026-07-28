@@ -14,6 +14,8 @@ export const VIEW_TYPE_TIMELINE = "plc-timeline";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
+/** Pixels of travel before a press counts as a pan rather than a click. */
+const DRAG_THRESHOLD = 4;
 
 function svgEl<K extends keyof SVGElementTagNameMap>(
 	tag: K,
@@ -41,6 +43,8 @@ export class TimelineView extends ItemView {
 	private sceneEl: SVGGElement | null = null;
 	private layout: Layout | null = null;
 	private redrawQueued = false;
+	/** Set while a pan is in progress, so the trailing click is not treated as one. */
+	private panned = false;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -364,6 +368,8 @@ export class TimelineView extends ItemView {
 		group.appendChild(title);
 
 		group.addEventListener("click", (event) => {
+			// Releasing a pan over a node should not open it.
+			if (this.panned) return;
 			event.stopPropagation();
 			void this.openNode(node.file, event);
 		});
@@ -377,35 +383,47 @@ export class TimelineView extends ItemView {
 	}
 
 	private registerCanvasGestures() {
-		let dragging = false;
+		let pressed = false;
+		let startX = 0;
+		let startY = 0;
 		let originX = 0;
 		let originY = 0;
 
 		this.registerDomEvent(this.canvasEl, "pointerdown", (event) => {
 			if (event.button !== 0) return;
-			// Node clicks stop propagation, so anything reaching here is background.
-			dragging = true;
+			pressed = true;
+			this.panned = false;
+			startX = event.clientX;
+			startY = event.clientY;
 			originX = event.clientX - this.panX;
 			originY = event.clientY - this.panY;
-			this.canvasEl.addClass("is-panning");
-			this.canvasEl.setPointerCapture(event.pointerId);
 		});
 
-		this.registerDomEvent(this.canvasEl, "pointermove", (event) => {
-			if (!dragging) return;
+		// Tracked on the window so a drag that leaves the canvas still ends
+		// cleanly. Pointer capture would do this too, but it also retargets the
+		// click that follows, which would swallow every click on a node.
+		this.registerDomEvent(window, "pointermove", (event) => {
+			if (!pressed) return;
+
+			if (!this.panned) {
+				const travelled = Math.hypot(event.clientX - startX, event.clientY - startY);
+				if (travelled < DRAG_THRESHOLD) return;
+				this.panned = true;
+				this.canvasEl.addClass("is-panning");
+			}
+
 			this.panX = event.clientX - originX;
 			this.panY = event.clientY - originY;
 			this.applyTransform();
 		});
 
-		const endDrag = (event: PointerEvent) => {
-			if (!dragging) return;
-			dragging = false;
+		this.registerDomEvent(window, "pointerup", () => {
+			if (!pressed) return;
+			pressed = false;
 			this.canvasEl.removeClass("is-panning");
-			this.canvasEl.releasePointerCapture(event.pointerId);
-		};
-		this.registerDomEvent(this.canvasEl, "pointerup", endDrag);
-		this.registerDomEvent(this.canvasEl, "pointercancel", endDrag);
+			// `panned` stays set until the click that follows has been ignored.
+			if (this.panned) window.setTimeout(() => (this.panned = false), 0);
+		});
 
 		this.registerDomEvent(this.canvasEl, "wheel", (event) => {
 			event.preventDefault();
