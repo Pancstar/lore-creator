@@ -10,6 +10,8 @@ export interface LoreSettings {
 	templatesFolder: string;
 	versionSetsFile: string;
 	showEarthTime: boolean;
+	minimapPinned: boolean;
+	minimapMode: "wide" | "near";
 }
 
 export const DEFAULT_SETTINGS: LoreSettings = {
@@ -20,6 +22,8 @@ export const DEFAULT_SETTINGS: LoreSettings = {
 	templatesFolder: "_Şablonlar",
 	versionSetsFile: "_Sistem/SÜRÜM SETLERİ.md",
 	showEarthTime: true,
+	minimapPinned: false,
+	minimapMode: "near",
 };
 
 export class LoreSettingTab extends PluginSettingTab {
@@ -132,6 +136,30 @@ export class LoreSettingTab extends PluginSettingTab {
 					this.plugin.settings.showEarthTime = value;
 					await this.plugin.saveSettings();
 				}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("settings.minimapPinned"))
+			.setDesc(t("settings.minimapPinned.desc"))
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.minimapPinned).onChange(async (value) => {
+					this.plugin.settings.minimapPinned = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("settings.minimapMode"))
+			.setDesc(t("settings.minimapMode.desc"))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("near", t("settings.minimapMode.near"))
+					.addOption("wide", t("settings.minimapMode.wide"))
+					.setValue(this.plugin.settings.minimapMode)
+					.onChange(async (value) => {
+						this.plugin.settings.minimapMode = value as "wide" | "near";
+						await this.plugin.saveSettings();
+					}),
 			);
 	}
 

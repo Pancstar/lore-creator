@@ -4,6 +4,8 @@ import { I18n } from "./i18n";
 import { Universe } from "./universe";
 import { TypeRegistry } from "./types";
 import { Banner } from "./banner";
+import { Navigator } from "./navigator";
+import { PickTargetModal } from "./modals/pickTarget";
 import { VersionStore } from "./versions/store";
 import { VersionSetStore } from "./versions/sets";
 import { NewNoteModal } from "./modals/newNote";
@@ -17,6 +19,7 @@ export default class LorePlugin extends Plugin {
 	universe!: Universe;
 	types!: TypeRegistry;
 	banner!: Banner;
+	navigator!: Navigator;
 	versions!: VersionStore;
 	versionSets!: VersionSetStore;
 
@@ -36,6 +39,7 @@ export default class LorePlugin extends Plugin {
 		this.versions = new VersionStore(this.app, this.settings.versionsFolder);
 		this.versionSets = new VersionSetStore(this.app, this.versions, this.settings.versionSetsFile);
 		this.banner = new Banner(this);
+		this.navigator = new Navigator(this);
 		this.applyLanguage();
 
 		for (const definition of VIEW_DEFINITIONS) {
@@ -75,25 +79,66 @@ export default class LorePlugin extends Plugin {
 			callback: () => new VersionSetsModal(this.app, this).open(),
 		});
 
+		this.addCommand({
+			id: "go-next",
+			name: this.i18n.t("command.goNext"),
+			checkCallback: (checking) => this.navigateCommand(checking, "next"),
+		});
+
+		this.addCommand({
+			id: "go-prev",
+			name: this.i18n.t("command.goPrev"),
+			checkCallback: (checking) => this.navigateCommand(checking, "prev"),
+		});
+
 		this.addSettingTab(new LoreSettingTab(this.app, this));
 
-		this.registerEvent(
-			this.app.workspace.on("file-open", () => this.banner.refreshAll()),
-		);
-		this.registerEvent(
-			this.app.workspace.on("layout-change", () => this.banner.refreshAll()),
-		);
+		this.registerEvent(this.app.workspace.on("file-open", () => this.decorateNotes()));
+		this.registerEvent(this.app.workspace.on("layout-change", () => this.decorateNotes()));
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => this.onMetadataChanged(file)),
 		);
 
 		// Views exist before this plugin finishes loading, so draw into them once
 		// the workspace is settled rather than waiting for the next file to open.
-		this.app.workspace.onLayoutReady(() => this.banner.refreshAll());
+		this.app.workspace.onLayoutReady(() => this.decorateNotes());
 	}
 
 	onunload() {
 		this.banner?.removeAll();
+		this.navigator?.removeAll();
+	}
+
+	/**
+	 * Only offered when the note actually leads somewhere; a branching story
+	 * asks which way rather than picking one on the author's behalf.
+	 */
+	private navigateCommand(checking: boolean, direction: "next" | "prev"): boolean {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) return false;
+
+		const targets = this.navigator.targets(file, direction);
+		if (targets.length === 0) return false;
+		if (checking) return true;
+
+		if (targets.length === 1) {
+			void this.app.workspace.getLeaf(false).openFile(targets[0]);
+			return true;
+		}
+
+		new PickTargetModal(
+			this.app,
+			targets,
+			this.i18n.t(direction === "next" ? "nav.pickNext" : "nav.pickPrev"),
+			(target) => void this.app.workspace.getLeaf(false).openFile(target),
+		).open();
+		return true;
+	}
+
+	/** Draws the banner and the navigation bar into every open markdown view. */
+	private decorateNotes() {
+		this.banner.refreshAll();
+		this.navigator.refreshAll();
 	}
 
 	private onMetadataChanged(file: TFile) {
@@ -103,18 +148,13 @@ export default class LorePlugin extends Plugin {
 
 		if (this.types.isRegistryFile(file)) {
 			this.types.invalidate();
-			this.banner.refreshAll();
+			this.decorateNotes();
 			return;
 		}
 
-		// Redraw only the views showing this file, so typing in one note does not
-		// rebuild banners across the whole workspace.
-		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
-			const view = leaf.view;
-			if (view instanceof MarkdownView && view.file?.path === file.path) {
-				this.banner.render(view);
-			}
-		}
+		// Editing one note can change what its neighbours point at, so every open
+		// view is refreshed rather than only the one showing this file.
+		this.decorateNotes();
 	}
 
 	async loadSettings() {
@@ -129,7 +169,7 @@ export default class LorePlugin extends Plugin {
 		this.versionSets.setPath(this.settings.versionSetsFile);
 		this.applyLanguage();
 		this.refreshViews();
-		this.banner.refreshAll();
+		this.decorateNotes();
 	}
 
 	private applyLanguage() {

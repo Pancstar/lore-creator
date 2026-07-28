@@ -1,4 +1,5 @@
 import { App, TFile, normalizePath } from "obsidian";
+import { linkTarget } from "../links";
 import { VersionStore } from "./store";
 
 export interface VersionSetEntry {
@@ -30,12 +31,6 @@ export interface SetPlan {
 
 function asString(value: unknown): string {
 	return typeof value === "string" ? value : "";
-}
-
-function linkTarget(value: unknown): string {
-	const text = asString(value).trim();
-	const match = text.match(/^\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-	return (match ? match[1] : text).trim();
 }
 
 function parseNumber(value: unknown): number {

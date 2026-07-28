@@ -393,6 +393,176 @@ button.plc-badge-version:hover {
 	color: var(--text-on-accent);
 }
 
+/* --- Navigation bar and map ------------------------------------------ */
+
+/* Keeps the last lines of a note clear of the bar sitting over them. */
+.plc-has-navigator .cm-content,
+.plc-has-navigator .markdown-preview-section {
+	padding-bottom: 4rem;
+}
+
+.plc-navbar {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
+	padding: var(--size-2-3) var(--size-4-4);
+	border-top: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+}
+
+.plc-navbar-side {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.plc-navbar-side.is-next {
+	justify-content: flex-end;
+}
+
+.plc-navbar-button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	max-width: 14rem;
+	height: auto;
+	padding: 0.2em 0.6em;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+}
+
+.plc-navbar-button:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.plc-navbar-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.plc-navbar-arrow {
+	display: flex;
+	flex: 0 0 auto;
+}
+
+.plc-navbar-arrow .svg-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.plc-navbar-end {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-style: italic;
+	align-self: center;
+}
+
+.plc-navbar-context {
+	flex: 0 0 auto;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
+.plc-navbar-actions {
+	flex: 0 0 auto;
+	display: flex;
+	gap: var(--size-2-1);
+}
+
+.plc-navbar-actions .clickable-icon.is-active {
+	color: var(--interactive-accent);
+}
+
+.plc-minimap {
+	position: absolute;
+	top: var(--size-4-3);
+	right: var(--size-4-3);
+	z-index: 11;
+	width: 17rem;
+	height: 9rem;
+	padding: var(--size-2-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.plc-minimap.is-pinned,
+.plc-minimap.is-peeking {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.plc-minimap-svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+.plc-minimap-edge {
+	fill: none;
+	stroke: var(--text-faint);
+	stroke-width: 1.2;
+	opacity: 0.7;
+}
+
+.plc-minimap-box {
+	fill: var(--background-secondary);
+	stroke: var(--background-modifier-border);
+	stroke-width: 1;
+}
+
+.plc-minimap-label {
+	fill: var(--text-muted);
+	font-size: 11px;
+}
+
+.plc-minimap-node {
+	cursor: pointer;
+}
+
+.plc-minimap-node:hover .plc-minimap-box {
+	stroke: var(--interactive-accent);
+}
+
+.plc-minimap-node.is-current .plc-minimap-box {
+	fill: var(--background-modifier-active-hover);
+	stroke: var(--text-normal);
+	stroke-width: 2;
+}
+
+.plc-minimap-node.is-current .plc-minimap-label {
+	fill: var(--text-normal);
+	font-weight: 600;
+}
+
+.plc-minimap-node.is-target .plc-minimap-box {
+	stroke: var(--interactive-accent);
+	stroke-width: 2;
+}
+
+.plc-minimap-node.is-target .plc-minimap-label {
+	fill: var(--interactive-accent);
+}
+
 /* --- Icon picker ----------------------------------------------------- */
 
 .plc-icon-picker .plc-icon-tabs {

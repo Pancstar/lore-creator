@@ -193,6 +193,22 @@ const en: Strings = {
 
 	"settings.versionSetsFile": "Version sets file",
 	"settings.versionSetsFile.desc": "Where named version snapshots are stored.",
+	"settings.minimapPinned": "Keep the map open",
+	"settings.minimapPinned.desc": "Otherwise it appears while you hover a navigation button.",
+	"settings.minimapMode": "Map view",
+	"settings.minimapMode.desc": "Whether the map shows the whole timeline or just what is one step away.",
+	"settings.minimapMode.near": "Nearby",
+	"settings.minimapMode.wide": "Whole timeline",
+
+	"nav.noNext": "ends here",
+	"nav.noPrev": "starts here",
+	"nav.pin": "Keep the map open",
+	"nav.mode": "Switch map view",
+	"nav.pickNext": "Which one comes next?",
+	"nav.pickPrev": "Which one came before?",
+	"nav.none": "This note has no connection in that direction.",
+	"command.goNext": "Go to the next fragment",
+	"command.goPrev": "Go to the previous fragment",
 };
 
 const tr: Strings = {
@@ -385,6 +401,22 @@ const tr: Strings = {
 
 	"settings.versionSetsFile": "Sürüm setleri dosyası",
 	"settings.versionSetsFile.desc": "İsimli sürüm anlık görüntülerinin saklandığı yer.",
+	"settings.minimapPinned": "Harita hep açık kalsın",
+	"settings.minimapPinned.desc": "Kapalıysa, gezinme düğmesinin üzerine geldiğinde belirir.",
+	"settings.minimapMode": "Harita görünümü",
+	"settings.minimapMode.desc": "Harita tüm zaman çizgisini mi, sadece bir adım ötesini mi göstersin.",
+	"settings.minimapMode.near": "Yakın çevre",
+	"settings.minimapMode.wide": "Tüm zaman çizgisi",
+
+	"nav.noNext": "burada bitiyor",
+	"nav.noPrev": "burada başlıyor",
+	"nav.pin": "Harita hep açık kalsın",
+	"nav.mode": "Harita görünümünü değiştir",
+	"nav.pickNext": "Sonraki hangisi?",
+	"nav.pickPrev": "Önceki hangisi?",
+	"nav.none": "Bu notun o yönde bağlantısı yok.",
+	"command.goNext": "Sonraki parçaya git",
+	"command.goPrev": "Önceki parçaya git",
 };
 
 const TABLES: Record<Exclude<Language, "auto">, Strings> = { en, tr };

@@ -1,4 +1,5 @@
 import { App, TFile, normalizePath } from "obsidian";
+import { linkTarget } from "../links";
 
 export interface VersionInfo {
 	number: number;
@@ -23,12 +24,6 @@ function parseNumber(value: unknown): number {
 	const text = asString(value).trim();
 	const match = text.match(/^v?(\d+)$/i);
 	return match ? Number.parseInt(match[1], 10) : 1;
-}
-
-function linkTarget(value: unknown): string {
-	const text = asString(value).trim();
-	const match = text.match(/^\[\[([^\]|]+)(?:\|[^\]]*)?\]\]$/);
-	return (match ? match[1] : text).trim();
 }
 
 /**
