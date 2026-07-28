@@ -479,6 +479,23 @@ button.plc-badge {
 	stroke-width: 2;
 }
 
+.plc-node.is-following .plc-node-box {
+	stroke: var(--interactive-accent);
+	stroke-dasharray: none;
+	opacity: 0.9;
+}
+
+.plc-drag-guide {
+	stroke: var(--interactive-accent);
+	stroke-width: 1.5;
+	stroke-dasharray: 4 4;
+	pointer-events: none;
+}
+
+.plc-drag-guide.is-hidden {
+	visibility: hidden;
+}
+
 .plc-drag-hint {
 	position: absolute;
 	z-index: 20;

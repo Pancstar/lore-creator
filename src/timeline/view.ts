@@ -4,6 +4,7 @@ import { VersionSetsModal } from "../modals/versionSets";
 import { TimelineModel, TimelineDefinition } from "./model";
 import {
 	AXIS_HEIGHT,
+	CANVAS_PADDING,
 	LEFT_GUTTER,
 	Lane,
 	Layout,
@@ -25,9 +26,17 @@ const MAX_DENSITY = 20;
 /** Pixels of travel before a press counts as a pan rather than a click. */
 const DRAG_THRESHOLD = 4;
 
+interface DragCompanion {
+	entry: PlacedNode;
+	group: SVGGElement;
+}
+
 interface NodeDrag {
 	entry: PlacedNode;
 	group: SVGGElement;
+	/** Notes sharing this exact moment, carried along to keep them simultaneous. */
+	companions: DragCompanion[];
+	guide: SVGLineElement | null;
 	startX: number;
 	startY: number;
 	offsetX: number;
@@ -36,6 +45,8 @@ interface NodeDrag {
 	/** Time the drop would land on, recomputed as the pointer moves. */
 	time: number | null;
 	lane: Lane | null;
+	/** True while alt is held, leaving the companions where they are. */
+	solo: boolean;
 	cancelled: boolean;
 }
 
@@ -68,6 +79,7 @@ export class TimelineView extends ItemView {
 	/** Set while a pan is in progress, so the trailing click is not treated as one. */
 	private panned = false;
 	private drag: NodeDrag | null = null;
+	private nodeEls = new Map<string, SVGGElement>();
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -376,9 +388,12 @@ export class TimelineView extends ItemView {
 
 	private drawNodes(scene: SVGGElement, layout: Layout) {
 		const group = svgEl("g", { class: "plc-nodes" });
+		this.nodeEls.clear();
 
 		for (const entry of layout.placed) {
-			group.appendChild(this.drawNode(entry));
+			const nodeEl = this.drawNode(entry);
+			this.nodeEls.set(entry.node.path, nodeEl);
+			group.appendChild(nodeEl);
 		}
 
 		scene.appendChild(group);
@@ -499,12 +514,34 @@ export class TimelineView extends ItemView {
 		return 1;
 	}
 
+	/**
+	 * Notes that happen at the same instant. Moving one without the others would
+	 * quietly break the simultaneity the author established, so they travel
+	 * together unless alt says otherwise.
+	 */
+	private companionsOf(entry: PlacedNode): DragCompanion[] {
+		const layout = this.layout;
+		if (!layout || entry.node.time === null) return [];
+
+		const companions: DragCompanion[] = [];
+		for (const other of layout.placed) {
+			if (other.node.path === entry.node.path) continue;
+			if (other.node.time !== entry.node.time) continue;
+
+			const group = this.nodeEls.get(other.node.path);
+			if (group) companions.push({ entry: other, group });
+		}
+		return companions;
+	}
+
 	private beginDrag(entry: PlacedNode, group: SVGGElement, event: PointerEvent) {
 		const point = this.toScene(event.clientX, event.clientY);
 
 		this.drag = {
 			entry,
 			group,
+			companions: this.companionsOf(entry),
+			guide: null,
 			startX: event.clientX,
 			startY: event.clientY,
 			offsetX: point.x - entry.x,
@@ -512,6 +549,7 @@ export class TimelineView extends ItemView {
 			moved: false,
 			time: entry.node.time,
 			lane: null,
+			solo: false,
 			cancelled: false,
 		};
 	}
@@ -527,22 +565,68 @@ export class TimelineView extends ItemView {
 			drag.moved = true;
 			this.panned = true;
 			drag.group.addClass("is-dragging");
+			drag.guide = this.createGuide();
 		}
 
 		const point = this.toScene(event.clientX, event.clientY);
-		const x = point.x - drag.offsetX;
 		const y = point.y - drag.offsetY;
 
 		drag.lane = laneAt(layout, y + drag.entry.height / 2);
+		drag.solo = event.altKey;
 
 		// Dropping into the untimed lane would mean erasing a date, which is a
 		// destructive edit disguised as a nudge; the time picker does that
 		// explicitly instead.
 		const intoUntimed = drag.lane?.untimed === true;
-		drag.time = intoUntimed ? null : this.snapTime(timeAt(layout, x), drag.entry, event.shiftKey);
+		const rawX = point.x - drag.offsetX;
+		drag.time = intoUntimed ? null : this.snapTime(timeAt(layout, rawX), drag.entry, event.shiftKey);
 
-		drag.group.setAttribute("transform", `translate(${x}, ${y})`);
+		// Snap the drawing to the time it would actually land on, so what you see
+		// is the value that gets written.
+		const snappedX =
+			drag.time === null ? rawX : this.xForTime(layout, drag.time);
+		const deltaX = snappedX - drag.entry.x;
+
+		drag.group.setAttribute("transform", `translate(${snappedX}, ${y})`);
+		for (const companion of drag.companions) {
+			const offset = drag.solo || intoUntimed ? 0 : deltaX;
+			companion.group.setAttribute(
+				"transform",
+				`translate(${companion.entry.x + offset}, ${companion.entry.y})`,
+			);
+			companion.group.toggleClass("is-following", offset !== 0);
+		}
+
+		this.updateGuide(drag, snappedX);
 		this.showDragHint(drag, event, intoUntimed);
+	}
+
+	private xForTime(layout: Layout, time: number): number {
+		return LEFT_GUTTER + CANVAS_PADDING + (time - layout.minTime) * layout.pixelsPerUnit;
+	}
+
+	/** A vertical line marking the moment the drag would land on. */
+	private createGuide(): SVGLineElement | null {
+		const layout = this.layout;
+		if (!this.sceneEl || !layout) return null;
+
+		const guide = svgEl("line", {
+			class: "plc-drag-guide",
+			x1: 0,
+			y1: AXIS_HEIGHT,
+			x2: 0,
+			y2: layout.height,
+		});
+		this.sceneEl.appendChild(guide);
+		return guide;
+	}
+
+	private updateGuide(drag: NodeDrag, x: number) {
+		if (!drag.guide) return;
+		const visible = drag.time !== null;
+		drag.guide.setAttribute("x1", String(x));
+		drag.guide.setAttribute("x2", String(x));
+		drag.guide.toggleClass("is-hidden", !visible);
 	}
 
 	private snapTime(raw: number, entry: PlacedNode, fine: boolean): number {
@@ -566,6 +650,13 @@ export class TimelineView extends ItemView {
 		if (drag.lane && !drag.lane.untimed && drag.lane.id !== drag.entry.node.flow) {
 			parts.push(`→ ${drag.lane.name}`);
 		}
+		if (drag.companions.length > 0 && !intoUntimed) {
+			parts.push(
+				drag.solo
+					? t("timeline.drag.solo")
+					: t("timeline.drag.together", String(drag.companions.length + 1)),
+			);
+		}
 
 		this.hintEl.setText(parts.join("  ·  "));
 		this.hintEl.toggleClass("is-blocked", intoUntimed);
@@ -587,15 +678,17 @@ export class TimelineView extends ItemView {
 
 		if (!drag) return;
 		drag.group.removeClass("is-dragging");
+		drag.guide?.remove();
 
 		if (!drag.moved || drag.cancelled || drag.time === null) {
-			// Nothing committed, so put the box back where the layout had it.
+			// Nothing committed, so put the boxes back where the layout had them.
 			this.render();
 			return;
 		}
 
+		const time = drag.time;
 		const flow = drag.lane && !drag.lane.untimed ? drag.lane.id : drag.entry.node.flow;
-		const timeChanged = drag.time !== drag.entry.node.time;
+		const timeChanged = time !== drag.entry.node.time;
 		const flowChanged = flow !== drag.entry.node.flow;
 
 		if (!timeChanged && !flowChanged) {
@@ -604,22 +697,33 @@ export class TimelineView extends ItemView {
 		}
 
 		try {
-			await this.app.fileManager.processFrontMatter(drag.entry.node.file, (frontmatter) => {
-				if (timeChanged) {
-					frontmatter.time = drag.time;
-					if (!isTimePrecision(frontmatter["time-precision"])) {
-						frontmatter["time-precision"] = "year";
-					}
-					// A label written for the old date would now be a lie, and the
-					// author's own wording is better lost than left wrong.
-					delete frontmatter["time-label"];
+			await this.writeTime(drag.entry.node.file, timeChanged ? time : null, flowChanged ? flow : null);
+
+			// Companions keep their own lanes; only the moment they share moves.
+			if (timeChanged && !drag.solo) {
+				for (const companion of drag.companions) {
+					await this.writeTime(companion.entry.node.file, time, null);
 				}
-				if (flowChanged) frontmatter.flow = flow;
-			});
+			}
 		} catch (error) {
 			console.error("Lore Creator: could not move the note", error);
 			this.render();
 		}
+	}
+
+	private async writeTime(file: TFile, time: number | null, flow: string | null) {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+			if (time !== null) {
+				frontmatter.time = time;
+				if (!isTimePrecision(frontmatter["time-precision"])) {
+					frontmatter["time-precision"] = "year";
+				}
+				// A label written for the old date would now be a lie, and the
+				// author's own wording is better lost than left wrong.
+				delete frontmatter["time-label"];
+			}
+			if (flow !== null) frontmatter.flow = flow;
+		});
 	}
 
 	private cancelDrag() {

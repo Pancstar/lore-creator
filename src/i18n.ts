@@ -129,6 +129,8 @@ const en: Strings = {
 	"timeline.lock": "Lock — stop notes being moved",
 	"timeline.unlock": "Unlock — allow notes to be moved",
 	"timeline.drag.blocked": "Drag onto a lane to give this a time",
+	"timeline.drag.together": "{0} notes at this moment",
+	"timeline.drag.solo": "this one only",
 	"timeline.hasVersions": "has other versions",
 
 	"common.cancel": "Cancel",
@@ -454,6 +456,8 @@ const tr: Strings = {
 	"timeline.lock": "Kilitle — notlar taşınamasın",
 	"timeline.unlock": "Kilidi aç — notlar taşınabilsin",
 	"timeline.drag.blocked": "Zaman vermek için bir şeride sürükle",
+	"timeline.drag.together": "Bu anda {0} not",
+	"timeline.drag.solo": "sadece bu",
 	"timeline.hasVersions": "başka sürümleri var",
 
 	"common.cancel": "Vazgeç",
