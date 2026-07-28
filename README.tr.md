@@ -26,6 +26,12 @@
 
 <br/>
 
+<img src="docs/images/timeline.png" alt="Dallanan zaman çizgisi tuvali: iki akış şeridi, birleşen bir hat ve zamanı olmayan notlar için ayrı şerit" width="900" />
+
+<sub>🕒 Zaman çizgisi tuvali — akışlar şerit, zaman yatay eksen, dallanmalar eğri çizgi</sub>
+
+<br/><br/>
+
 > **Durum — erken ama tamam.** Aşağıdaki her özellik çalışıyor.
 > 1.0'a kadar arayüzler değişebilir, frontmatter şeması henüz dondurulmadı.
 
@@ -236,6 +242,14 @@ flowchart LR
     class C1,C2 entity
     class VIEW view
 ```
+
+<div align="center">
+
+<img src="docs/images/laws.png" alt="Yasalar görünümü: üstte evren geneli yasalar, altta varlığa özel olanlar; her biri kime tabi olduğunu ve kimin çiğnediğini gösterir" width="420" />
+
+<sub>⚖️ Üstte evren geneli, altta varlığa özel — her yasa kimin tabi olduğunu ve kimin çiğnediğini gösterir</sub>
+
+</div>
 
 ### 💡 Terfi edilebilen taslaklar
 

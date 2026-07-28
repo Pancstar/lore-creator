@@ -26,6 +26,12 @@
 
 <br/>
 
+<img src="docs/images/timeline.png" alt="The branching timeline canvas: two flows, a converging thread and a lane for notes with no time yet" width="900" />
+
+<sub>🕒 The timeline canvas — flows as lanes, time across the axis, branches drawn as curves</sub>
+
+<br/><br/>
+
 > **Status — early but complete.** Every feature below works.
 > Interfaces may still shift before 1.0, and the frontmatter schema is not yet frozen.
 
@@ -232,6 +238,14 @@ flowchart LR
     class C1,C2 entity
     class VIEW view
 ```
+
+<div align="center">
+
+<img src="docs/images/laws.png" alt="The laws view: universe-wide laws above entity-specific ones, each showing who is bound by it and who breaks it" width="420" />
+
+<sub>⚖️ Universe-wide laws above, entity-specific below — each one showing who is bound and who breaks it</sub>
+
+</div>
 
 ### 💡 Drafts you can promote
 
