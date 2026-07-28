@@ -155,7 +155,8 @@ export class Banner {
 		if (time === null) {
 			text = this.plugin.i18n.t("banner.noTime");
 		} else {
-			const calendar = this.plugin.universe.readCalendar();
+			const calendarId = asString(frontmatter["calendar-id"]) || undefined;
+			const calendar = this.plugin.universe.readCalendar(calendarId);
 			const head = label || this.plugin.universe.formatTime(time, calendar);
 			const tail = timeEnd === null ? "" : ` – ${this.plugin.universe.formatTime(timeEnd, calendar)}`;
 			const prefix = uncertain ? `~ ` : "";
@@ -205,6 +206,7 @@ export class Banner {
 			precision: isTimePrecision(precisionRaw) ? precisionRaw : "year",
 			label: asString(frontmatter["time-label"]),
 			uncertain: frontmatter["time-uncertain"] === true,
+			calendarId: asString(frontmatter["calendar-id"]) || this.plugin.universe.readCalendar().id,
 		};
 
 		new TimePickerModal(
@@ -220,12 +222,19 @@ export class Banner {
 						delete target["time-end"];
 						delete target["time-label"];
 						delete target["time-uncertain"];
+						delete target["calendar-id"];
 						return;
 					}
 					target.time = value.time;
 					target["time-precision"] = value.precision;
 					target["time-label"] = value.label;
 					target["time-uncertain"] = value.uncertain;
+
+					if (value.calendarId && value.calendarId !== this.plugin.universe.readCalendar().id) {
+						target["calendar-id"] = value.calendarId;
+					} else {
+						delete target["calendar-id"];
+					}
 
 					if (value.timeEnd === null) {
 						delete target["time-end"];

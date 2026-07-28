@@ -32,6 +32,8 @@ export interface TimelineNode {
 	timeEnd: number | null;
 	timeLabel: string;
 	uncertain: boolean;
+	/** Calendar this node's `time` was entered in; empty means the universe's first calendar. */
+	calendarId: string;
 	next: string[];
 	prev: string[];
 }
@@ -153,6 +155,7 @@ export class TimelineModel {
 				timeEnd: asNumberOrNull(frontmatter["time-end"]),
 				timeLabel: asString(frontmatter["time-label"]),
 				uncertain: frontmatter["time-uncertain"] === true,
+				calendarId: asString(frontmatter["calendar-id"]),
 				next: linkTargets(frontmatter.next),
 				prev: linkTargets(frontmatter.prev),
 			});

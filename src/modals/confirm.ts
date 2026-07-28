@@ -48,8 +48,7 @@ export class ConfirmModal extends Modal {
 					this.close();
 				});
 				if (this.options.destructive) {
-					// setDestructive() reads better but needs 1.13, above our floor.
-					button.setWarning();
+					button.setDestructive();
 				} else {
 					button.setCta();
 				}

@@ -27,9 +27,9 @@ const en: Strings = {
 	"settings.templatesFolder": "Templates folder",
 	"settings.templatesFolder.desc": "Per-type note templates.",
 
-	"settings.calendar": "Calendar",
+	"settings.calendar": "Calendars",
 	"settings.calendar.desc":
-		"Calendar settings are stored in the universe file, not in plugin settings — so the universe definition survives even if this plugin is removed.",
+		"Calendars are stored in the universe file, not in plugin settings — so the universe definition survives even if this plugin is removed. Create as many as your universe needs; each keeps its own settings.",
 	"settings.calendar.missing": "Universe file not found. Create it to edit calendar settings.",
 	"settings.calendar.name": "Calendar name",
 	"settings.calendar.namePlaceholder": "e.g. Xen Calendar",
@@ -87,6 +87,7 @@ const en: Strings = {
 	"command.newNote": "New lore note",
 
 	"time.title": "Time",
+	"time.calendar": "Calendar",
 	"time.precision": "Precision",
 	"time.precision.desc": "How exact this moment is. The stored value stays a single sortable number either way.",
 	"time.precision.year": "Year only",
@@ -110,6 +111,13 @@ const en: Strings = {
 
 	"settings.calendar.days": "Days per unit",
 	"settings.calendar.days.desc": "How many days one unit of your calendar contains. Used to place dates inside a year.",
+	"settings.calendar.add": "Add calendar",
+	"settings.calendar.unnamed": "Unnamed calendar",
+	"settings.calendar.remove": "Remove this calendar",
+	"settings.calendar.async": "Irregular pace (async)",
+	"settings.calendar.async.desc":
+		"No fixed Earth-time ratio for this calendar. Its author sets each note's Earth-time correspondence by hand.",
+	"settings.calendar.async.note": "Irregular calendar — set `earth-time` by hand on notes that use it.",
 
 	"timeline.parallel": "parallel",
 	"timeline.undefined": "no timeline note",
@@ -367,9 +375,9 @@ const tr: Strings = {
 	"settings.templatesFolder": "Şablonlar klasörü",
 	"settings.templatesFolder.desc": "Türe göre not şablonları.",
 
-	"settings.calendar": "Takvim",
+	"settings.calendar": "Takvimler",
 	"settings.calendar.desc":
-		"Takvim ayarları eklenti ayarlarında değil, evren dosyasında saklanır — eklenti kaldırılsa bile evren tanımı vault'ta kalsın diye.",
+		"Takvimler eklenti ayarlarında değil, evren dosyasında saklanır — eklenti kaldırılsa bile evren tanımı vault'ta kalsın diye. Evrenin ihtiyacı kadar takvim oluşturabilirsin, her biri kendi ayarlarını korur.",
 	"settings.calendar.missing": "Evren dosyası bulunamadı. Takvim ayarlarını düzenlemek için önce onu oluştur.",
 	"settings.calendar.name": "Takvim adı",
 	"settings.calendar.namePlaceholder": "örn. Xen Takvimi",
@@ -427,6 +435,7 @@ const tr: Strings = {
 	"command.newNote": "Yeni lore notu",
 
 	"time.title": "Zaman",
+	"time.calendar": "Takvim",
 	"time.precision": "Hassasiyet",
 	"time.precision.desc": "Bu anın ne kadar kesin olduğu. Saklanan değer her hâlükârda tek bir sıralanabilir sayıdır.",
 	"time.precision.year": "Sadece yıl",
@@ -450,6 +459,13 @@ const tr: Strings = {
 
 	"settings.calendar.days": "Birim başına gün",
 	"settings.calendar.days.desc": "Takviminin bir birimi kaç gün içerir. Tarihleri yıl içine yerleştirmek için kullanılır.",
+	"settings.calendar.add": "Takvim ekle",
+	"settings.calendar.unnamed": "İsimsiz takvim",
+	"settings.calendar.remove": "Bu takvimi kaldır",
+	"settings.calendar.async": "Düzensiz akış (asenkron)",
+	"settings.calendar.async.desc":
+		"Bu takvim için sabit bir Dünya-zamanı oranı yok. Her notun Dünya zamanı karşılığını yazar kendisi elle girer.",
+	"settings.calendar.async.note": "Asenkron takvim — bu takvimi kullanan notlarda `earth-time` alanını elle gir.",
 
 	"timeline.parallel": "paralel",
 	"timeline.undefined": "tanım notu yok",
