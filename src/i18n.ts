@@ -23,6 +23,7 @@ const en: Strings = {
 	"settings.language.auto": "Automatic",
 	"settings.language.en": "English",
 	"settings.language.tr": "Türkçe",
+	"settings.language.reload": "Reload Obsidian to rename commands and ribbon buttons.",
 
 	"settings.folders": "Folders and files",
 	"settings.universeFile": "Universe file",
@@ -140,6 +141,7 @@ const tr: Strings = {
 	"settings.language.auto": "Otomatik",
 	"settings.language.en": "English",
 	"settings.language.tr": "Türkçe",
+	"settings.language.reload": "Komut ve buton adlarının değişmesi için Obsidian'ı yeniden yükle.",
 
 	"settings.folders": "Klasörler ve dosyalar",
 	"settings.universeFile": "Evren dosyası",

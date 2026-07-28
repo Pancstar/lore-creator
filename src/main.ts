@@ -1,4 +1,4 @@
-import { MarkdownView, Plugin, TFile, WorkspaceLeaf, normalizePath } from "obsidian";
+import { MarkdownView, Plugin, TFile, WorkspaceLeaf, moment, normalizePath } from "obsidian";
 import { DEFAULT_SETTINGS, LoreSettingTab, LoreSettings } from "./settings";
 import { I18n } from "./i18n";
 import { Universe } from "./universe";
@@ -102,8 +102,9 @@ export default class LorePlugin extends Plugin {
 	}
 
 	private applyLanguage() {
-		// `window.localStorage.language` is where Obsidian keeps its UI locale.
-		const locale = window.localStorage.getItem("language") ?? "en";
+		// Obsidian keeps its bundled moment in sync with the interface language,
+		// which is more dependable than reading localStorage directly.
+		const locale = moment.locale() || window.localStorage.getItem("language") || "en";
 		this.i18n.setLanguage(this.settings.language, locale);
 	}
 

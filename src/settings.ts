@@ -45,6 +45,9 @@ export class LoreSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.language = value as Language;
 						await this.plugin.saveSettings();
+						// Command and ribbon labels are fixed when the plugin loads,
+						// so those need a restart even though the rest updates live.
+						new Notice(this.plugin.i18n.t("settings.language.reload"));
 						// Re-render so the tab itself picks up the new language.
 						this.display();
 					}),
