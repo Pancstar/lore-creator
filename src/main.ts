@@ -96,6 +96,9 @@ export default class LorePlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on("file-open", () => this.decorateNotes()));
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.decorateNotes()));
 		this.registerEvent(
+			this.app.workspace.on("resize", () => this.navigator.syncStatusBarOffset()),
+		);
+		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => this.onMetadataChanged(file)),
 		);
 

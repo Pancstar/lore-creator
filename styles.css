@@ -398,14 +398,15 @@ button.plc-badge-version:hover {
 /* Keeps the last lines of a note clear of the bar sitting over them. */
 .plc-has-navigator .cm-content,
 .plc-has-navigator .markdown-preview-section {
-	padding-bottom: 4rem;
+	padding-bottom: calc(4rem + var(--plc-status-bar-offset, 0px));
 }
 
 .plc-navbar {
 	position: absolute;
 	left: 0;
 	right: 0;
-	bottom: 0;
+	/* Sits above Obsidian's floating status bar rather than under it. */
+	bottom: var(--plc-status-bar-offset, 0px);
 	z-index: 10;
 	display: flex;
 	align-items: center;

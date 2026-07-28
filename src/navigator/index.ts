@@ -6,6 +6,7 @@ import { Minimap, MinimapMode } from "./minimap";
 const BAR_CLASS = "plc-navbar";
 const MAP_CLASS = "plc-minimap";
 const HOST_CLASS = "plc-has-navigator";
+const STATUS_BAR_OFFSET = "--plc-status-bar-offset";
 
 function asString(value: unknown): string {
 	return typeof value === "string" ? value : "";
@@ -24,6 +25,7 @@ export class Navigator {
 	}
 
 	refreshAll() {
+		this.syncStatusBarOffset();
 		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view;
 			if (view instanceof MarkdownView) this.render(view);
@@ -31,10 +33,22 @@ export class Navigator {
 	}
 
 	removeAll() {
+		document.body.style.removeProperty(STATUS_BAR_OFFSET);
 		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view;
 			if (view instanceof MarkdownView) this.remove(view);
 		}
+	}
+
+	/**
+	 * Obsidian's status bar floats over the bottom-right of the workspace. Its
+	 * width changes as the word count ticks up, so the bar is lifted clear of it
+	 * by its height rather than given a right margin that would never stay right.
+	 */
+	syncStatusBarOffset() {
+		const statusBar = document.body.querySelector<HTMLElement>(".status-bar");
+		const height = statusBar ? Math.round(statusBar.getBoundingClientRect().height) : 0;
+		document.body.style.setProperty(STATUS_BAR_OFFSET, `${height}px`);
 	}
 
 	private remove(view: MarkdownView) {
