@@ -13,13 +13,15 @@ import { PromoteModal } from "./modals/promote";
 import { VersionMenuModal } from "./modals/versionMenu";
 import { VersionSetsModal } from "./modals/versionSets";
 import {
+	DashboardView,
 	DraftsView,
 	LawsView,
-	LoreView,
 	TimelineView,
 	VIEW_DEFINITIONS,
 	VIEW_TYPE_TIMELINE,
 } from "./views";
+import { SearchModal } from "./modals/search";
+import { ExportModal } from "./modals/export";
 
 export default class LorePlugin extends Plugin {
 	settings: LoreSettings = { ...DEFAULT_SETTINGS };
@@ -85,6 +87,18 @@ export default class LorePlugin extends Plugin {
 			id: "version-sets",
 			name: this.i18n.t("command.versionSets"),
 			callback: () => new VersionSetsModal(this.app, this).open(),
+		});
+
+		this.addCommand({
+			id: "lore-search",
+			name: this.i18n.t("command.search"),
+			callback: () => new SearchModal(this.app, this).open(),
+		});
+
+		this.addCommand({
+			id: "export-universe",
+			name: this.i18n.t("command.export"),
+			callback: () => new ExportModal(this.app, this).open(),
 		});
 
 		this.addCommand({
@@ -208,7 +222,11 @@ export default class LorePlugin extends Plugin {
 		for (const definition of VIEW_DEFINITIONS) {
 			for (const leaf of this.app.workspace.getLeavesOfType(definition.type)) {
 				const view = leaf.view;
-				if (view instanceof LoreView || view instanceof LawsView || view instanceof DraftsView) {
+				if (
+					view instanceof LawsView ||
+					view instanceof DraftsView ||
+					view instanceof DashboardView
+				) {
 					view.render();
 				}
 			}

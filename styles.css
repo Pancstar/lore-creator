@@ -113,6 +113,81 @@
 	color: var(--text-muted);
 }
 
+.plc-collapsible {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	cursor: pointer;
+}
+
+.plc-collapsible:hover {
+	color: var(--text-muted);
+}
+
+.plc-caret {
+	display: flex;
+}
+
+.plc-caret .svg-icon {
+	width: 0.9em;
+	height: 0.9em;
+}
+
+.plc-audit-kind {
+	margin-top: var(--size-4-2);
+	color: var(--color-orange);
+}
+
+.plc-audit-row {
+	background: transparent;
+	border-style: dashed;
+}
+
+/* --- Dashboard stats -------------------------------------------------- */
+
+.plc-stat-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+	gap: var(--size-2-2);
+}
+
+.plc-stat {
+	padding: var(--size-2-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	text-align: center;
+}
+
+.plc-stat-value {
+	color: var(--text-normal);
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-semibold);
+	line-height: 1.2;
+}
+
+.plc-stat-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* --- Search ----------------------------------------------------------- */
+
+.plc-search-input {
+	width: 100%;
+	margin-bottom: var(--size-4-2);
+}
+
+.plc-search-results {
+	max-height: 22rem;
+	overflow-y: auto;
+	margin-top: var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: var(--size-4-2);
+}
+
 /* --- Settings -------------------------------------------------------- */
 
 .plc-warning {
