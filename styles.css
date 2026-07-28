@@ -165,6 +165,145 @@ button.plc-badge {
 	color: var(--text-normal);
 }
 
+/* --- Timeline -------------------------------------------------------- */
+
+.plc-timeline-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+	overflow: hidden;
+}
+
+.plc-timeline-toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: var(--size-2-3) var(--size-4-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex: 0 0 auto;
+}
+
+.plc-timeline-spacer {
+	flex: 1 1 auto;
+}
+
+.plc-timeline-select {
+	max-width: 20rem;
+}
+
+.plc-timeline-canvas {
+	flex: 1 1 auto;
+	position: relative;
+	overflow: hidden;
+	cursor: grab;
+	touch-action: none;
+}
+
+.plc-timeline-canvas.is-panning {
+	cursor: grabbing;
+}
+
+.plc-timeline-svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+	user-select: none;
+}
+
+.plc-timeline-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: var(--size-4-8);
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.plc-timeline-empty p {
+	max-width: 32rem;
+}
+
+.plc-lane-band {
+	fill: var(--background-secondary);
+	opacity: 0.45;
+}
+
+.plc-lane-band.is-untimed {
+	fill: var(--background-modifier-error);
+	opacity: 0.08;
+}
+
+.plc-lane-label {
+	fill: var(--text-muted);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.plc-axis-line {
+	stroke: var(--background-modifier-border);
+	stroke-width: 1;
+}
+
+.plc-axis-grid {
+	stroke: var(--background-modifier-border);
+	stroke-width: 1;
+	stroke-dasharray: 2 6;
+	opacity: 0.6;
+}
+
+.plc-axis-label {
+	fill: var(--text-faint);
+	font-size: 11px;
+}
+
+.plc-edge {
+	fill: none;
+	stroke: var(--text-faint);
+	stroke-width: 1.6;
+}
+
+.plc-arrowhead {
+	fill: var(--text-faint);
+}
+
+.plc-node {
+	cursor: pointer;
+}
+
+.plc-node-box {
+	fill: var(--background-primary);
+	stroke: var(--background-modifier-border);
+	stroke-width: 1.5;
+}
+
+.plc-node:hover .plc-node-box {
+	stroke: var(--interactive-accent);
+}
+
+.plc-node.is-partial .plc-node-box {
+	stroke: var(--color-yellow);
+}
+
+.plc-node.is-done .plc-node-box {
+	stroke: var(--color-green);
+}
+
+.plc-node.is-uncertain .plc-node-box {
+	stroke-dasharray: 5 4;
+}
+
+.plc-node-icon {
+	font-size: 14px;
+}
+
+.plc-node-title {
+	fill: var(--text-normal);
+	font-size: 13px;
+}
+
 /* --- Icon picker ----------------------------------------------------- */
 
 .plc-icon-picker .plc-icon-tabs {

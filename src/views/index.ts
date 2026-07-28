@@ -1,18 +1,13 @@
-import { WorkspaceLeaf } from "obsidian";
+import { View, WorkspaceLeaf } from "obsidian";
 import { LoreView } from "./base";
+import { TimelineView, VIEW_TYPE_TIMELINE } from "../timeline/view";
 import type LorePlugin from "../main";
 
-export const VIEW_TYPE_TIMELINE = "plc-timeline";
 export const VIEW_TYPE_LAWS = "plc-laws";
 export const VIEW_TYPE_DRAFTS = "plc-drafts";
 export const VIEW_TYPE_DASHBOARD = "plc-dashboard";
 
-export class TimelineView extends LoreView {
-	readonly viewType = VIEW_TYPE_TIMELINE;
-	readonly titleKey = "view.timeline";
-	readonly hintKey = "view.timeline.hint";
-	readonly icon = "git-branch";
-}
+export { VIEW_TYPE_TIMELINE };
 
 export class LawsView extends LoreView {
 	readonly viewType = VIEW_TYPE_LAWS;
@@ -40,7 +35,9 @@ export interface ViewDefinition {
 	titleKey: string;
 	commandKey: string;
 	icon: string;
-	create: (leaf: WorkspaceLeaf, plugin: LorePlugin) => LoreView;
+	/** Timelines need width, so they open as a tab instead of in the sidebar. */
+	placement: "main" | "sidebar";
+	create: (leaf: WorkspaceLeaf, plugin: LorePlugin) => View;
 }
 
 export const VIEW_DEFINITIONS: ViewDefinition[] = [
@@ -49,6 +46,7 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		titleKey: "view.timeline",
 		commandKey: "command.openTimeline",
 		icon: "git-branch",
+		placement: "main",
 		create: (leaf, plugin) => new TimelineView(leaf, plugin),
 	},
 	{
@@ -56,6 +54,7 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		titleKey: "view.laws",
 		commandKey: "command.openLaws",
 		icon: "scroll",
+		placement: "sidebar",
 		create: (leaf, plugin) => new LawsView(leaf, plugin),
 	},
 	{
@@ -63,6 +62,7 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		titleKey: "view.drafts",
 		commandKey: "command.openDrafts",
 		icon: "lightbulb",
+		placement: "sidebar",
 		create: (leaf, plugin) => new DraftsView(leaf, plugin),
 	},
 	{
@@ -70,8 +70,9 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		titleKey: "view.dashboard",
 		commandKey: "command.openDashboard",
 		icon: "layout-dashboard",
+		placement: "sidebar",
 		create: (leaf, plugin) => new DashboardView(leaf, plugin),
 	},
 ];
 
-export { LoreView };
+export { LoreView, TimelineView };

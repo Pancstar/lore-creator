@@ -5,7 +5,7 @@ import { Universe } from "./universe";
 import { TypeRegistry } from "./types";
 import { Banner } from "./banner";
 import { NewNoteModal } from "./modals/newNote";
-import { LoreView, VIEW_DEFINITIONS } from "./views";
+import { LoreView, TimelineView, VIEW_DEFINITIONS, VIEW_TYPE_TIMELINE } from "./views";
 
 export default class LorePlugin extends Plugin {
 	settings: LoreSettings = { ...DEFAULT_SETTINGS };
@@ -72,6 +72,10 @@ export default class LorePlugin extends Plugin {
 	}
 
 	private onMetadataChanged(file: TFile) {
+		// Any frontmatter edit can move a note on the timeline, so the drawing is
+		// rebuilt regardless of which note changed.
+		this.refreshTimelines();
+
 		if (this.types.isRegistryFile(file)) {
 			this.types.invalidate();
 			this.banner.refreshAll();
@@ -115,9 +119,17 @@ export default class LorePlugin extends Plugin {
 				if (view instanceof LoreView) view.render();
 			}
 		}
+		this.refreshTimelines();
 	}
 
-	/** Reveals an existing leaf of this type, or opens one in the right sidebar. */
+	private refreshTimelines() {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)) {
+			const view = leaf.view;
+			if (view instanceof TimelineView) view.queueRender();
+		}
+	}
+
+	/** Reveals an existing leaf, opening it where that kind of view belongs. */
 	async activateView(viewType: string) {
 		const { workspace } = this.app;
 
@@ -127,7 +139,9 @@ export default class LorePlugin extends Plugin {
 			return;
 		}
 
-		const leaf: WorkspaceLeaf | null = workspace.getRightLeaf(false);
+		const definition = VIEW_DEFINITIONS.find((entry) => entry.type === viewType);
+		const leaf: WorkspaceLeaf | null =
+			definition?.placement === "main" ? workspace.getLeaf("tab") : workspace.getRightLeaf(false);
 		if (!leaf) return;
 
 		await leaf.setViewState({ type: viewType, active: true });

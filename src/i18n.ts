@@ -118,6 +118,19 @@ const en: Strings = {
 
 	"settings.calendar.days": "Days per unit",
 	"settings.calendar.days.desc": "How many days one unit of your calendar contains. Used to place dates inside a year.",
+
+	"timeline.parallel": "parallel",
+	"timeline.undefined": "no timeline note",
+	"timeline.unnamedFlow": "Unassigned",
+	"timeline.untimed": "Time unknown",
+	"timeline.zoomIn": "Zoom in",
+	"timeline.zoomOut": "Zoom out",
+	"timeline.fit": "Fit to view",
+	"timeline.empty.title": "No timelines yet",
+	"timeline.empty.body":
+		"Create a note of type Timeline, give it a timeline id, and list its flows. Notes pointing at that id will appear here.",
+	"timeline.noNotes.title": "This timeline is empty",
+	"timeline.noNotes.body": "No note carries timeline: {0} yet. Set it on a note and give the note a time.",
 };
 
 const tr: Strings = {
@@ -236,6 +249,19 @@ const tr: Strings = {
 
 	"settings.calendar.days": "Birim başına gün",
 	"settings.calendar.days.desc": "Takviminin bir birimi kaç gün içerir. Tarihleri yıl içine yerleştirmek için kullanılır.",
+
+	"timeline.parallel": "paralel",
+	"timeline.undefined": "tanım notu yok",
+	"timeline.unnamedFlow": "Atanmamış",
+	"timeline.untimed": "Zamanı belirsiz",
+	"timeline.zoomIn": "Yakınlaştır",
+	"timeline.zoomOut": "Uzaklaştır",
+	"timeline.fit": "Ekrana sığdır",
+	"timeline.empty.title": "Henüz zaman çizgisi yok",
+	"timeline.empty.body":
+		"Zaman Çizgisi türünde bir not oluştur, bir çizgi kimliği ver ve akışlarını listele. O kimliği gösteren notlar burada belirir.",
+	"timeline.noNotes.title": "Bu zaman çizgisi boş",
+	"timeline.noNotes.body": "Hiçbir not timeline: {0} taşımıyor. Bir nota bunu ata ve zaman ver.",
 };
 
 const TABLES: Record<Exclude<Language, "auto">, Strings> = { en, tr };
