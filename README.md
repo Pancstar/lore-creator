@@ -1,5 +1,7 @@
 # Lore Creator
 
+**English** · [Türkçe](README.tr.md)
+
 An Obsidian plugin for building fictional universes — branching timelines,
 versioned story fragments, custom calendars, and worldbuilding entities that
 know how they relate to one another.
