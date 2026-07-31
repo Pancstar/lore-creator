@@ -66,11 +66,33 @@ function isPathField(key: string): key is PathField {
 }
 
 export class LoreSettingTab extends PluginSettingTab {
+	/**
+	 * Session-local copy of the calendar list. Mutations write through to the
+	 * universe note and re-render from this array rather than re-reading
+	 * `readCalendars()` right after a write — Obsidian's metadataCache lags a
+	 * write by a tick, so an immediate re-read would show stale data.
+	 */
+	private calendars: Calendar[] | null = null;
+
 	constructor(
 		app: App,
 		private plugin: LorePlugin,
 	) {
 		super(app, plugin);
+	}
+
+	hide(): void {
+		super.hide();
+		// Forces a fresh read next time the tab opens, so out-of-band edits
+		// to the universe note (or a different vault/universe) aren't missed.
+		this.calendars = null;
+	}
+
+	private getCalendars(): Calendar[] {
+		if (this.calendars === null) {
+			this.calendars = this.plugin.universe.readCalendars();
+		}
+		return this.calendars;
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -191,21 +213,31 @@ export class LoreSettingTab extends PluginSettingTab {
 	 */
 	private calendarListDefinition(): SettingDefinitionItem {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		const calendars = this.plugin.universe.readCalendars();
+		const calendars = this.getCalendars();
 
 		return {
 			type: "list",
 			heading: t("settings.calendar"),
 			visible: () => !!this.plugin.universe.file,
 			items: calendars.map((calendar, index) => ({
+				type: "page",
 				name: calendar.calendarName.trim() || t("settings.calendar.unnamed"),
-				render: (setting: Setting, group: SettingGroup) =>
-					this.renderCalendarBox(setting, group, calendars, index),
+				items: [
+					{
+						// Suffixed with the index so duplicate calendar names (e.g.
+						// several unnamed calendars) don't collide on the framework's
+						// item key — the heading shown in renderCalendarBox() overrides
+						// this text anyway.
+						name: `${calendar.calendarName.trim() || t("settings.calendar.unnamed")} #${index + 1}`,
+						render: (setting: Setting, group: SettingGroup) =>
+							this.renderCalendarBox(setting, group, calendars, index),
+					},
+				],
 			})),
 			onDelete: (index) => {
 				void (async () => {
-					const next = calendars.filter((_, i) => i !== index);
-					await this.plugin.universe.writeCalendars(next);
+					calendars.splice(index, 1);
+					await this.plugin.universe.writeCalendars(calendars);
 					this.update();
 				})();
 			},
@@ -213,8 +245,8 @@ export class LoreSettingTab extends PluginSettingTab {
 				name: t("settings.calendar.add"),
 				action: () => {
 					void (async () => {
-						const next = [...calendars, { ...DEFAULT_CALENDAR, id: newCalendarId(calendars) }];
-						await this.plugin.universe.writeCalendars(next);
+						calendars.push({ ...DEFAULT_CALENDAR, id: newCalendarId(calendars) });
+						await this.plugin.universe.writeCalendars(calendars);
 						this.update();
 					})();
 				},
