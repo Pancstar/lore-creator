@@ -1,4 +1,4 @@
-import type { Calendar } from "./universe";
+import type { Time } from "./universe";
 
 export type TimePrecision = "year" | "date" | "datetime";
 
@@ -9,7 +9,7 @@ export function isTimePrecision(value: unknown): value is TimePrecision {
 }
 
 /**
- * A point in the universe's own calendar, before it is flattened into the
+ * A point in the universe's own time system, before it is flattened into the
  * single sortable number that notes actually store.
  */
 export interface TimeParts {
@@ -24,19 +24,19 @@ export const EMPTY_PARTS: TimeParts = { year: 0, day: 1, hour: 0, minute: 0 };
 
 const MINUTES_PER_DAY = 24 * 60;
 
-function daysPerYear(calendar: Calendar): number {
-	return calendar.calendarDays > 0 ? calendar.calendarDays : 365;
+function daysPerYear(time: Time): number {
+	return time.timeDays > 0 ? time.timeDays : 365;
 }
 
 /**
- * Flattens calendar parts into the sortable `time` value. Everything below the
+ * Flattens time parts into the sortable `time` value. Everything below the
  * year lives in the fractional part, so ordering works regardless of how exotic
- * the calendar is.
+ * the universe's time system is.
  */
-export function partsToTime(parts: TimeParts, calendar: Calendar, precision: TimePrecision): number {
+export function partsToTime(parts: TimeParts, time: Time, precision: TimePrecision): number {
 	if (precision === "year") return parts.year;
 
-	const days = daysPerYear(calendar);
+	const days = daysPerYear(time);
 	const dayOffset = (Math.max(1, parts.day) - 1) / days;
 
 	if (precision === "date") return parts.year + dayOffset;
@@ -46,12 +46,12 @@ export function partsToTime(parts: TimeParts, calendar: Calendar, precision: Tim
 }
 
 /** Inverse of `partsToTime`, for populating the editor with an existing value. */
-export function timeToParts(time: number, calendar: Calendar, precision: TimePrecision): TimeParts {
-	const year = Math.floor(time);
+export function timeToParts(value: number, time: Time, precision: TimePrecision): TimeParts {
+	const year = Math.floor(value);
 	if (precision === "year") return { year, day: 1, hour: 0, minute: 0 };
 
-	const days = daysPerYear(calendar);
-	const remainder = time - year;
+	const days = daysPerYear(time);
+	const remainder = value - year;
 
 	const totalMinutes = Math.round(remainder * days * MINUTES_PER_DAY);
 	const dayIndex = Math.floor(totalMinutes / MINUTES_PER_DAY);
@@ -75,12 +75,12 @@ function pad(value: number): string {
  */
 export function formatLabel(
 	parts: TimeParts,
-	calendar: Calendar,
+	time: Time,
 	precision: TimePrecision,
 	language: "tr" | "en",
 ): string {
-	const name = calendar.calendarName.trim();
-	const unit = calendar.calendarUnit.trim();
+	const name = time.timeName.trim();
+	const unit = time.timeUnit.trim();
 
 	const head = [name, unit, String(parts.year)].filter((piece) => piece.length > 0).join(" ");
 	if (precision === "year") return head;

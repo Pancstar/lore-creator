@@ -3,7 +3,7 @@
 # 🌌 Lore Creator
 
 ### Build fictional universes inside Obsidian
-#### Branching timelines · versioned drafts · your own calendar
+#### Branching timelines · versioned drafts · your own time system
 
 **English** &nbsp;·&nbsp; [Türkçe](README.tr.md)
 
@@ -111,7 +111,7 @@ flowchart TD
 | 🌿 | **Branching canvas** | Time across the x axis, flows as lanes, `next`/`prev` drawn as curves |
 | 📝 | **Versions that reshape the story** | Each draft carries its own time, flow and connections |
 | 📚 | **Version sets** | Flip a whole story revision back and forth in one move |
-| 📅 | **Your own calendar** | Any unit, any epoch, optional mapping to Earth years |
+| 📅 | **Your own time system** | Any unit, any epoch, optional mapping to Earth years |
 | 🗂️ | **Types and entities** | Characters, species, places, factions, objects, events — defined in a note, not in code |
 | ⚖️ | **Laws** | Universe physics and the entities that break them, linked both ways |
 | 💡 | **Drafts you can promote** | A shelf for homeless ideas, turned into real notes when they earn it |
@@ -193,7 +193,7 @@ earlier draft means remembering and flipping every one of them by hand.
 > Every file move is preceded by a dialog naming the exact paths, ordered so the
 > current content reaches its new home before anything overwrites it.
 
-### 📅 Your own calendar
+### 📅 Your own time system
 
 A universe does not have to run on Earth years.
 
@@ -204,9 +204,9 @@ time-label: "Xen Year 134923, day 165"
 earth-time: 2050           # optional reference for readers
 ```
 
-Define the calendar once — unit name, epoch, days per unit, and how it maps to
-Earth years — and the time picker fills in the number and the label for you. Or
-leave the mapping out and write the label yourself.
+Define the time system once — unit name, epoch, days per unit, and how it maps
+to Earth years — and the time picker fills in the number and the label for
+you. Or leave the mapping out and write the label yourself.
 
 ### 🗂️ Types and entities
 
@@ -295,7 +295,7 @@ first, and never overwriting a file that already exists.
 
 ```
 📁 <vault>
-├── 📄 Universe.md            ← calendar, timelines, universe-wide laws
+├── 📄 Universe.md            ← time system, timelines, universe-wide laws
 ├── 📁 System/
 │   ├── 📄 Types.md           ← the type registry: edit a note, not the plugin
 │   └── 📄 Version sets.md
@@ -423,7 +423,7 @@ Every path is configurable; these are the defaults:
 | Version sets file | `System/Version sets.md` |
 | Exports folder | `Exports` |
 
-Calendar settings are written into the universe note's frontmatter rather than
+The time system is written into the universe note's frontmatter rather than
 plugin data, so a vault stays self-describing even without the plugin installed.
 The type registry lives in a note for the same reason.
 

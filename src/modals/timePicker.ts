@@ -16,14 +16,13 @@ export interface TimeValue {
 	precision: TimePrecision;
 	label: string;
 	uncertain: boolean;
-	/** Which of the universe's calendars this time was entered in. */
-	calendarId: string;
 }
 
 /**
- * Lets the author think in their own calendar while the note keeps the single
- * sortable number the timeline needs. The label is generated but stays editable,
- * since no generated string beats what the author wants readers to see.
+ * Lets the author think in the universe's own time system while the note keeps
+ * the single sortable number the timeline needs. The label is generated but
+ * stays editable, since no generated string beats what the author wants
+ * readers to see.
  */
 export class TimePickerModal extends Modal {
 	private precision: TimePrecision;
@@ -32,7 +31,6 @@ export class TimePickerModal extends Modal {
 	private label: string;
 	private labelTouched: boolean;
 	private uncertain: boolean;
-	private calendarId: string;
 
 	private bodyEl!: HTMLElement;
 	private labelInput: HTMLInputElement | null = null;
@@ -47,14 +45,13 @@ export class TimePickerModal extends Modal {
 		private onSubmit: (value: TimeValue) => void,
 	) {
 		super(app);
-		this.calendarId = current.calendarId || this.universe.readCalendar().id;
-		const calendar = this.universe.readCalendar(this.calendarId);
+		const time = this.universe.readTime();
 
 		this.precision = current.precision;
 		this.start =
-			current.time === null ? { ...EMPTY_PARTS } : timeToParts(current.time, calendar, current.precision);
+			current.time === null ? { ...EMPTY_PARTS } : timeToParts(current.time, time, current.precision);
 		this.end =
-			current.timeEnd === null ? null : timeToParts(current.timeEnd, calendar, current.precision);
+			current.timeEnd === null ? null : timeToParts(current.timeEnd, time, current.precision);
 		this.label = current.label;
 		this.labelTouched = current.label.length > 0;
 		this.uncertain = current.uncertain;
@@ -63,20 +60,6 @@ export class TimePickerModal extends Modal {
 	onOpen() {
 		this.titleEl.setText(this.i18n.t("time.title"));
 		this.contentEl.addClass("plc-time-picker");
-
-		const calendars = this.universe.readCalendars();
-		if (calendars.length > 1) {
-			const dropdownSetting = new Setting(this.contentEl).setName(this.i18n.t("time.calendar"));
-			dropdownSetting.addDropdown((dropdown) => {
-				for (const calendar of calendars) {
-					dropdown.addOption(calendar.id, calendar.calendarName.trim() || calendar.id);
-				}
-				dropdown.setValue(this.calendarId).onChange((value) => {
-					this.calendarId = value;
-					this.renderBody();
-				});
-			});
-		}
 
 		new Setting(this.contentEl)
 			.setName(this.i18n.t("time.precision"))
@@ -106,7 +89,6 @@ export class TimePickerModal extends Modal {
 						precision: this.precision,
 						label: "",
 						uncertain: false,
-						calendarId: this.calendarId,
 					});
 					this.close();
 				}),
@@ -122,7 +104,7 @@ export class TimePickerModal extends Modal {
 
 	private renderBody() {
 		this.bodyEl.empty();
-		const calendar = this.universe.readCalendar(this.calendarId);
+		const timeSystem = this.universe.readTime();
 
 		this.addPartsRow(this.i18n.t("time.start"), this.start);
 
@@ -155,7 +137,7 @@ export class TimePickerModal extends Modal {
 			.addText((text) => {
 				this.labelInput = text.inputEl;
 				text
-					.setValue(this.label || formatLabel(this.start, calendar, this.precision, this.language))
+					.setValue(this.label || formatLabel(this.start, timeSystem, this.precision, this.language))
 					.onChange((value) => {
 						this.label = value;
 						// Once the author edits the label, stop overwriting it.
@@ -168,8 +150,8 @@ export class TimePickerModal extends Modal {
 	}
 
 	private addPartsRow(name: string, parts: TimeParts) {
-		const calendar = this.universe.readCalendar(this.calendarId);
-		const unit = calendar.calendarUnit.trim() || this.i18n.t("time.year");
+		const timeSystem = this.universe.readTime();
+		const unit = timeSystem.timeUnit.trim() || this.i18n.t("time.year");
 
 		const setting = new Setting(this.bodyEl).setName(name);
 
@@ -226,9 +208,9 @@ export class TimePickerModal extends Modal {
 	}
 
 	private syncLabel() {
-		const calendar = this.universe.readCalendar(this.calendarId);
+		const timeSystem = this.universe.readTime();
 		if (!this.labelTouched && this.labelInput) {
-			this.label = formatLabel(this.start, calendar, this.precision, this.language);
+			this.label = formatLabel(this.start, timeSystem, this.precision, this.language);
 			this.labelInput.value = this.label;
 		}
 		this.refreshPreview();
@@ -237,22 +219,21 @@ export class TimePickerModal extends Modal {
 	/** Shows the stored number and Earth reference, so surprises surface here. */
 	private refreshPreview() {
 		if (!this.previewEl) return;
-		const calendar = this.universe.readCalendar(this.calendarId);
-		const time = partsToTime(this.start, calendar, this.precision);
-		const earth = this.universe.toEarthTime(time, calendar);
+		const timeSystem = this.universe.readTime();
+		const time = partsToTime(this.start, timeSystem, this.precision);
+		const earth = this.universe.toEarthTime(time, timeSystem);
 		const earthPart = earth === null ? "" : ` · ${this.i18n.t("time.earth")} ${earth}`;
 		this.previewEl.setText(`time: ${time}${earthPart}`);
 	}
 
 	private submit() {
-		const calendar = this.universe.readCalendar(this.calendarId);
+		const timeSystem = this.universe.readTime();
 		this.onSubmit({
-			time: partsToTime(this.start, calendar, this.precision),
-			timeEnd: this.end ? partsToTime(this.end, calendar, this.precision) : null,
+			time: partsToTime(this.start, timeSystem, this.precision),
+			timeEnd: this.end ? partsToTime(this.end, timeSystem, this.precision) : null,
 			precision: this.precision,
 			label: this.label,
 			uncertain: this.uncertain,
-			calendarId: this.calendarId,
 		});
 		this.close();
 	}

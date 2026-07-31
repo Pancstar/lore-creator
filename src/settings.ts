@@ -1,15 +1,7 @@
-import {
-	App,
-	Notice,
-	PluginSettingTab,
-	Setting,
-	SettingDefinitionItem,
-	SettingGroup,
-} from "obsidian";
+import { App, Notice, PluginSettingTab, SettingDefinitionItem } from "obsidian";
 import type LorePlugin from "./main";
 import type { Language } from "./i18n";
 import { SetupModal } from "./setup/wizard";
-import { Calendar, DEFAULT_CALENDAR, newCalendarId } from "./universe";
 
 export interface LoreSettings {
 	language: Language;
@@ -66,33 +58,11 @@ function isPathField(key: string): key is PathField {
 }
 
 export class LoreSettingTab extends PluginSettingTab {
-	/**
-	 * Session-local copy of the calendar list. Mutations write through to the
-	 * universe note and re-render from this array rather than re-reading
-	 * `readCalendars()` right after a write — Obsidian's metadataCache lags a
-	 * write by a tick, so an immediate re-read would show stale data.
-	 */
-	private calendars: Calendar[] | null = null;
-
 	constructor(
 		app: App,
 		private plugin: LorePlugin,
 	) {
 		super(app, plugin);
-	}
-
-	hide(): void {
-		super.hide();
-		// Forces a fresh read next time the tab opens, so out-of-band edits
-		// to the universe note (or a different vault/universe) aren't missed.
-		this.calendars = null;
-	}
-
-	private getCalendars(): Calendar[] {
-		if (this.calendars === null) {
-			this.calendars = this.plugin.universe.readCalendars();
-		}
-		return this.calendars;
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -166,15 +136,37 @@ export class LoreSettingTab extends PluginSettingTab {
 				],
 			},
 			{
-				name: t("settings.calendar.desc"),
-				searchable: false,
+				type: "group",
+				heading: t("settings.time"),
+				items: [
+					{
+						name: t("settings.time.desc"),
+						searchable: false,
+					},
+					{
+						name: t("settings.time.missing"),
+						searchable: false,
+						visible: () => !this.plugin.universe.file,
+					},
+					{
+						name: t("settings.time.name"),
+						visible: () => !!this.plugin.universe.file,
+						control: {
+							type: "text",
+							key: "time:name",
+							placeholder: t("settings.time.namePlaceholder"),
+						},
+					},
+					{
+						name: t("settings.time.openUniverse"),
+						visible: () => !!this.plugin.universe.file,
+						action: () => {
+							const file = this.plugin.universe.file;
+							if (file) void this.app.workspace.getLeaf(false).openFile(file);
+						},
+					},
+				],
 			},
-			{
-				name: t("settings.calendar.missing"),
-				searchable: false,
-				visible: () => !this.plugin.universe.file,
-			},
-			this.calendarListDefinition(),
 			{
 				type: "group",
 				heading: t("settings.display"),
@@ -205,189 +197,11 @@ export class LoreSettingTab extends PluginSettingTab {
 		return items;
 	}
 
-	/**
-	 * Calendars live in the universe note as a list, each rendered in its own
-	 * bordered block so a field always writes back into its own calendar object
-	 * and never bleeds into a sibling's settings. Structural changes (add,
-	 * remove) trigger a full `update()` since the number of rows itself changes.
-	 */
-	private calendarListDefinition(): SettingDefinitionItem {
-		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		const calendars = this.getCalendars();
-
-		return {
-			type: "list",
-			heading: t("settings.calendar"),
-			visible: () => !!this.plugin.universe.file,
-			items: calendars.map((calendar, index) => ({
-				type: "page",
-				name: calendar.calendarName.trim() || t("settings.calendar.unnamed"),
-				items: [
-					{
-						// Suffixed with the index so duplicate calendar names (e.g.
-						// several unnamed calendars) don't collide on the framework's
-						// item key — the heading shown in renderCalendarBox() overrides
-						// this text anyway.
-						name: `${calendar.calendarName.trim() || t("settings.calendar.unnamed")} #${index + 1}`,
-						render: (setting: Setting, group: SettingGroup) =>
-							this.renderCalendarBox(setting, group, calendars, index),
-					},
-				],
-			})),
-			onDelete: (index) => {
-				void (async () => {
-					calendars.splice(index, 1);
-					await this.plugin.universe.writeCalendars(calendars);
-					this.update();
-				})();
-			},
-			addItem: {
-				name: t("settings.calendar.add"),
-				action: () => {
-					void (async () => {
-						calendars.push({ ...DEFAULT_CALENDAR, id: newCalendarId(calendars) });
-						await this.plugin.universe.writeCalendars(calendars);
-						this.update();
-					})();
-				},
-			},
-		};
-	}
-
-	private renderCalendarBox(
-		headerSetting: Setting,
-		group: SettingGroup,
-		calendars: Calendar[],
-		index: number,
-	) {
-		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		let calendar = calendars[index];
-		headerSetting.setName(calendar.calendarName.trim() || t("settings.calendar.unnamed")).setHeading();
-
-		/** Writes one field of this calendar only, leaving the rest of the list untouched. */
-		const update = async (patch: Partial<Calendar>) => {
-			calendar = { ...calendar, ...patch };
-			calendars[index] = calendar;
-			await this.plugin.universe.writeCalendars(calendars);
-			refreshPreview();
-		};
-
-		group.addSetting((setting) => {
-			setting
-				.setName(t("settings.calendar.name"))
-				.addText((text) =>
-					text
-						.setPlaceholder(t("settings.calendar.namePlaceholder"))
-						.setValue(calendar.calendarName)
-						.onChange((value) => void update({ calendarName: value })),
-				);
-		});
-
-		group.addSetting((setting) => {
-			setting
-				.setName(t("settings.calendar.unit"))
-				.addText((text) =>
-					text
-						.setPlaceholder(t("settings.calendar.unitPlaceholder"))
-						.setValue(calendar.calendarUnit)
-						.onChange((value) => void update({ calendarUnit: value })),
-				);
-		});
-
-		group.addSetting((setting) => {
-			setting
-				.setName(t("settings.calendar.epoch"))
-				.setDesc(t("settings.calendar.epoch.desc"))
-				.addText((text) =>
-					text.setValue(String(calendar.calendarEpoch)).onChange((value) => {
-						const parsed = Number.parseFloat(value);
-						if (!Number.isFinite(parsed)) return;
-						void update({ calendarEpoch: parsed });
-					}),
-				);
-		});
-
-		group.addSetting((setting) => {
-			setting
-				.setName(t("settings.calendar.days"))
-				.setDesc(t("settings.calendar.days.desc"))
-				.addText((text) =>
-					text.setValue(String(calendar.calendarDays)).onChange((value) => {
-						const parsed = Number.parseFloat(value);
-						if (!Number.isFinite(parsed) || parsed <= 0) return;
-						void update({ calendarDays: parsed });
-					}),
-				);
-		});
-
-		let earthEpochSetting!: Setting;
-		let earthRatioSetting!: Setting;
-		let noteEl!: HTMLElement;
-
-		group.addSetting((setting) => {
-			setting
-				.setName(t("settings.calendar.async"))
-				.setDesc(t("settings.calendar.async.desc"))
-				.addToggle((toggle) =>
-					toggle.setValue(calendar.async).onChange((value) => {
-						void update({ async: value });
-						earthEpochSetting.settingEl.toggleClass("is-hidden", value);
-						earthRatioSetting.settingEl.toggleClass("is-hidden", value);
-						noteEl.toggleClass("is-hidden", !value);
-					}),
-				);
-		});
-
-		group.addSetting((setting) => {
-			earthEpochSetting = setting
-				.setName(t("settings.calendar.earthEpoch"))
-				.setDesc(t("settings.calendar.earthEpoch.desc"))
-				.addText((text) =>
-					text
-						.setValue(calendar.earthEpoch === null ? "" : String(calendar.earthEpoch))
-						.onChange((value) => {
-							const trimmed = value.trim();
-							if (trimmed === "") {
-								void update({ earthEpoch: null });
-								return;
-							}
-							const parsed = Number.parseFloat(trimmed);
-							if (!Number.isFinite(parsed)) return;
-							void update({ earthEpoch: parsed });
-						}),
-				);
-			earthEpochSetting.settingEl.toggleClass("is-hidden", calendar.async);
-		});
-
-		group.addSetting((setting) => {
-			earthRatioSetting = setting
-				.setName(t("settings.calendar.ratio"))
-				.setDesc(t("settings.calendar.ratio.desc"))
-				.addText((text) =>
-					text.setValue(String(calendar.earthRatio)).onChange((value) => {
-						const parsed = Number.parseFloat(value);
-						if (!Number.isFinite(parsed)) return;
-						void update({ earthRatio: parsed });
-					}),
-				);
-			earthRatioSetting.settingEl.toggleClass("is-hidden", calendar.async);
-		});
-
-		noteEl = group.listEl.createEl("p", { text: t("settings.calendar.async.note"), cls: "plc-calendar-note" });
-		noteEl.toggleClass("is-hidden", !calendar.async);
-
-		const previewEl = group.listEl.createEl("p", { cls: "plc-preview" });
-		const refreshPreview = () => {
-			const sample = calendar.calendarEpoch + 50;
-			const label = this.plugin.universe.formatTime(sample, calendar);
-			const earth = this.plugin.universe.toEarthTime(sample, calendar);
-			const earthPart = earth === null ? "" : ` — Earth ${earth}`;
-			previewEl.setText(`${t("settings.calendar.preview")}: ${label}${earthPart}`);
-		};
-		refreshPreview();
-	}
-
 	getControlValue(key: string): unknown {
+		if (key === "time:name") {
+			return this.plugin.universe.readTime().timeName;
+		}
+
 		if (key.startsWith("path:")) {
 			const field = key.slice("path:".length);
 			return isPathField(field) ? this.plugin.settings[field] : "";
@@ -408,6 +222,13 @@ export class LoreSettingTab extends PluginSettingTab {
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key === "time:name") {
+			if (typeof value !== "string") return;
+			const current = this.plugin.universe.readTime();
+			await this.plugin.universe.writeTime({ ...current, timeName: value });
+			return;
+		}
+
 		if (key.startsWith("path:")) {
 			const field = key.slice("path:".length);
 			if (!isPathField(field) || typeof value !== "string") return;

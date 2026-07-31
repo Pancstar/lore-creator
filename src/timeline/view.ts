@@ -564,7 +564,7 @@ export class TimelineView extends ItemView {
 	private snapStep(entry: PlacedNode): number {
 		const frontmatter = this.app.metadataCache.getFileCache(entry.node.file)?.frontmatter;
 		const precision: unknown = frontmatter?.["time-precision"];
-		const days = this.plugin.universe.readCalendar(entry.node.calendarId).calendarDays || 365;
+		const days = this.plugin.universe.readTime().timeDays || 365;
 
 		if (precision === "date") return 1 / days;
 		if (precision === "datetime") return 1 / (days * 24);
@@ -681,10 +681,7 @@ export class TimelineView extends ItemView {
 
 		label.textContent =
 			follows && drag.time !== null
-				? this.plugin.universe.formatTime(
-						Number(drag.time.toFixed(4)),
-						this.plugin.universe.readCalendar(drag.entry.node.calendarId),
-					)
+				? this.plugin.universe.formatTime(Number(drag.time.toFixed(4)))
 				: tick.label;
 	}
 
@@ -692,10 +689,7 @@ export class TimelineView extends ItemView {
 		const atMoment = nodes.filter((node) => node.time === value);
 		const named = atMoment.find((node) => node.timeLabel.length > 0);
 		if (named) return named.timeLabel;
-		return this.plugin.universe.formatTime(
-			Number(value.toFixed(4)),
-			this.plugin.universe.readCalendar(atMoment[0]?.calendarId),
-		);
+		return this.plugin.universe.formatTime(Number(value.toFixed(4)));
 	}
 
 	private xForTime(layout: Layout, time: number): number {
@@ -736,13 +730,12 @@ export class TimelineView extends ItemView {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.hintEl ??= this.canvasEl.createDiv({ cls: "plc-drag-hint" });
 
-		const calendar = this.plugin.universe.readCalendar(drag.entry.node.calendarId);
 		const parts: string[] = [];
 
 		if (intoUntimed) {
 			parts.push(t("timeline.drag.blocked"));
 		} else if (drag.time !== null) {
-			parts.push(this.plugin.universe.formatTime(Number(drag.time.toFixed(4)), calendar));
+			parts.push(this.plugin.universe.formatTime(Number(drag.time.toFixed(4))));
 		}
 		if (drag.lane && !drag.lane.untimed && drag.lane.id !== drag.entry.node.flow) {
 			parts.push(`→ ${drag.lane.name}`);

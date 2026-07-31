@@ -21,27 +21,19 @@ const en: Strings = {
 
 	"settings.folders": "Folders and files",
 	"settings.universeFile": "Universe file",
-	"settings.universeFile.desc": "Root note holding the universe name and calendar definition.",
+	"settings.universeFile.desc": "Root note holding the universe name and time definition.",
 	"settings.versionsFolder": "Versions folder",
 	"settings.versionsFolder.desc": "Older versions of notes are stored here. Never deleted automatically.",
 	"settings.templatesFolder": "Templates folder",
 	"settings.templatesFolder.desc": "Per-type note templates.",
 
-	"settings.calendar": "Calendars",
-	"settings.calendar.desc":
-		"Calendars are stored in the universe file, not in plugin settings — so the universe definition survives even if this plugin is removed. Create as many as your universe needs; each keeps its own settings.",
-	"settings.calendar.missing": "Universe file not found. Create it to edit calendar settings.",
-	"settings.calendar.name": "Calendar name",
-	"settings.calendar.namePlaceholder": "e.g. Xen Calendar",
-	"settings.calendar.unit": "Unit name",
-	"settings.calendar.unitPlaceholder": "e.g. Year, Cycle",
-	"settings.calendar.epoch": "Calendar epoch",
-	"settings.calendar.epoch.desc": "The zero point of your calendar, as a `time` value.",
-	"settings.calendar.earthEpoch": "Earth equivalent of epoch",
-	"settings.calendar.earthEpoch.desc": "Which Earth year the epoch corresponds to. Leave blank to disable conversion.",
-	"settings.calendar.ratio": "Earth years per unit",
-	"settings.calendar.ratio.desc": "How many Earth years one unit of your calendar spans.",
-	"settings.calendar.preview": "Preview",
+	"settings.time": "Time",
+	"settings.time.desc":
+		"The time system is stored in the universe file, not in plugin settings — so the universe definition survives even if this plugin is removed. Edit the epoch, day count, unit and Earth-time ratio directly on the universe note's properties.",
+	"settings.time.missing": "Universe file not found. Create it to edit the time system.",
+	"settings.time.name": "Time system name",
+	"settings.time.namePlaceholder": "e.g. Xen Calendar",
+	"settings.time.openUniverse": "Open universe note",
 
 	"settings.display": "Display",
 	"settings.showEarthTime": "Show Earth time",
@@ -87,7 +79,6 @@ const en: Strings = {
 	"command.newNote": "New lore note",
 
 	"time.title": "Time",
-	"time.calendar": "Calendar",
 	"time.precision": "Precision",
 	"time.precision.desc": "How exact this moment is. The stored value stays a single sortable number either way.",
 	"time.precision.year": "Year only",
@@ -100,7 +91,7 @@ const en: Strings = {
 	"time.uncertain": "Approximate",
 	"time.uncertain.desc": "Drawn with a dashed edge on the timeline.",
 	"time.label": "Label",
-	"time.label.desc": "What readers see. Generated from the calendar until you edit it.",
+	"time.label.desc": "What readers see. Generated from the time system until you edit it.",
 	"time.year": "Year",
 	"time.day": "Day",
 	"time.hour": "Hour",
@@ -108,16 +99,6 @@ const en: Strings = {
 	"time.earth": "Earth",
 	"time.save": "Save",
 	"time.clear": "Clear time",
-
-	"settings.calendar.days": "Days per unit",
-	"settings.calendar.days.desc": "How many days one unit of your calendar contains. Used to place dates inside a year.",
-	"settings.calendar.add": "Add calendar",
-	"settings.calendar.unnamed": "Unnamed calendar",
-	"settings.calendar.remove": "Remove this calendar",
-	"settings.calendar.async": "Irregular pace (async)",
-	"settings.calendar.async.desc":
-		"No fixed Earth-time ratio for this calendar. Its author sets each note's Earth-time correspondence by hand.",
-	"settings.calendar.async.note": "Irregular calendar — set `earth-time` by hand on notes that use it.",
 
 	"timeline.parallel": "parallel",
 	"timeline.undefined": "no timeline note",
@@ -344,9 +325,9 @@ const en: Strings = {
 	"setup.registry.body":
 		"This note's frontmatter is read by the plugin. Add an entry to define a new type; the body is yours to document them in.",
 	"setup.universe.body": "A short description of the universe goes here.",
-	"setup.universe.calendar": "Calendar",
-	"setup.universe.calendarBody":
-		"Set the calendar fields in the plugin settings. A note's time is always a single sortable number; these fields decide how it is shown and how it maps to Earth time.",
+	"setup.universe.time": "Time",
+	"setup.universe.timeBody":
+		"Set the time fields above in this note's properties, or the name in plugin settings. A note's time is always a single sortable number; these fields decide how it is shown and how it maps to Earth time.",
 	"command.setup": "Set up this vault",
 };
 
@@ -369,27 +350,19 @@ const tr: Strings = {
 
 	"settings.folders": "Klasörler ve dosyalar",
 	"settings.universeFile": "Evren dosyası",
-	"settings.universeFile.desc": "Evrenin adını ve takvim tanımını tutan kök not.",
+	"settings.universeFile.desc": "Evrenin adını ve zaman tanımını tutan kök not.",
 	"settings.versionsFolder": "Sürümler klasörü",
 	"settings.versionsFolder.desc": "Notların eski sürümleri burada saklanır. Kendiliğinden asla silinmez.",
 	"settings.templatesFolder": "Şablonlar klasörü",
 	"settings.templatesFolder.desc": "Türe göre not şablonları.",
 
-	"settings.calendar": "Takvimler",
-	"settings.calendar.desc":
-		"Takvimler eklenti ayarlarında değil, evren dosyasında saklanır — eklenti kaldırılsa bile evren tanımı vault'ta kalsın diye. Evrenin ihtiyacı kadar takvim oluşturabilirsin, her biri kendi ayarlarını korur.",
-	"settings.calendar.missing": "Evren dosyası bulunamadı. Takvim ayarlarını düzenlemek için önce onu oluştur.",
-	"settings.calendar.name": "Takvim adı",
-	"settings.calendar.namePlaceholder": "örn. Xen Takvimi",
-	"settings.calendar.unit": "Birim adı",
-	"settings.calendar.unitPlaceholder": "örn. Yıl, Çevrim",
-	"settings.calendar.epoch": "Takvimin sıfır noktası",
-	"settings.calendar.epoch.desc": "Takviminin başlangıcı, `time` değeri olarak.",
-	"settings.calendar.earthEpoch": "Sıfır noktasının Dünya karşılığı",
-	"settings.calendar.earthEpoch.desc": "O noktanın hangi Dünya yılına denk geldiği. Boş bırakırsan çevrim kapanır.",
-	"settings.calendar.ratio": "Birim başına Dünya yılı",
-	"settings.calendar.ratio.desc": "Takviminin bir birimi kaç Dünya yılı eder.",
-	"settings.calendar.preview": "Önizleme",
+	"settings.time": "Zaman",
+	"settings.time.desc":
+		"Zaman sistemi eklenti ayarlarında değil, evren dosyasında saklanır — eklenti kaldırılsa bile evren tanımı vault'ta kalsın diye. Sıfır noktası, gün sayısı, birim ve Dünya-zamanı oranını doğrudan evren notunun özelliklerinden (properties) düzenle.",
+	"settings.time.missing": "Evren dosyası bulunamadı. Zaman sistemini düzenlemek için önce onu oluştur.",
+	"settings.time.name": "Zaman sistemi adı",
+	"settings.time.namePlaceholder": "örn. Xen Takvimi",
+	"settings.time.openUniverse": "Evren notunu aç",
 
 	"settings.display": "Görünüm",
 	"settings.showEarthTime": "Dünya zamanını göster",
@@ -435,7 +408,6 @@ const tr: Strings = {
 	"command.newNote": "Yeni lore notu",
 
 	"time.title": "Zaman",
-	"time.calendar": "Takvim",
 	"time.precision": "Hassasiyet",
 	"time.precision.desc": "Bu anın ne kadar kesin olduğu. Saklanan değer her hâlükârda tek bir sıralanabilir sayıdır.",
 	"time.precision.year": "Sadece yıl",
@@ -448,7 +420,7 @@ const tr: Strings = {
 	"time.uncertain": "Yaklaşık",
 	"time.uncertain.desc": "Zaman çizgisinde kesikli kenarla çizilir.",
 	"time.label": "Etiket",
-	"time.label.desc": "Okuyucunun gördüğü metin. Sen düzenleyene kadar takvimden üretilir.",
+	"time.label.desc": "Okuyucunun gördüğü metin. Sen düzenleyene kadar zaman sisteminden üretilir.",
 	"time.year": "Yıl",
 	"time.day": "Gün",
 	"time.hour": "Saat",
@@ -456,16 +428,6 @@ const tr: Strings = {
 	"time.earth": "Dünya",
 	"time.save": "Kaydet",
 	"time.clear": "Zamanı temizle",
-
-	"settings.calendar.days": "Birim başına gün",
-	"settings.calendar.days.desc": "Takviminin bir birimi kaç gün içerir. Tarihleri yıl içine yerleştirmek için kullanılır.",
-	"settings.calendar.add": "Takvim ekle",
-	"settings.calendar.unnamed": "İsimsiz takvim",
-	"settings.calendar.remove": "Bu takvimi kaldır",
-	"settings.calendar.async": "Düzensiz akış (asenkron)",
-	"settings.calendar.async.desc":
-		"Bu takvim için sabit bir Dünya-zamanı oranı yok. Her notun Dünya zamanı karşılığını yazar kendisi elle girer.",
-	"settings.calendar.async.note": "Asenkron takvim — bu takvimi kullanan notlarda `earth-time` alanını elle gir.",
 
 	"timeline.parallel": "paralel",
 	"timeline.undefined": "tanım notu yok",
@@ -691,9 +653,9 @@ const tr: Strings = {
 	"setup.registry.body":
 		"Bu notun frontmatter'ı eklenti tarafından okunur. Yeni tür tanımlamak için bir girdi ekle; gövde onları açıklaman için senin.",
 	"setup.universe.body": "Evrenin kısa tanımı buraya.",
-	"setup.universe.calendar": "Takvim",
-	"setup.universe.calendarBody":
-		"Takvim alanlarını eklenti ayarlarından doldur. Bir notun zamanı her zaman tek bir sıralanabilir sayıdır; bu alanlar onun nasıl gösterileceğini ve Dünya zamanına nasıl karşılık geldiğini belirler.",
+	"setup.universe.time": "Zaman",
+	"setup.universe.timeBody":
+		"Yukarıdaki zaman alanlarını bu notun özelliklerinden (properties), adını da eklenti ayarlarından doldur. Bir notun zamanı her zaman tek bir sıralanabilir sayıdır; bu alanlar onun nasıl gösterileceğini ve Dünya zamanına nasıl karşılık geldiğini belirler.",
 	"command.setup": "Bu vault'u kur",
 };
 
