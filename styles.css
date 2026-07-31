@@ -246,6 +246,14 @@
 
 /* --- Note banner ----------------------------------------------------- */
 
+/* The plugin banner already surfaces icon/status/time, so the native
+   in-document properties block is redundant noise on every open note.
+   It stays reachable via the right-sidebar "File properties" view. */
+.markdown-source-view .metadata-container,
+.markdown-reading-view .metadata-container {
+	display: none;
+}
+
 .plc-banner {
 	display: flex;
 	flex-direction: column;
