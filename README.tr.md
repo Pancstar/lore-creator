@@ -3,7 +3,7 @@
 # 🌌 Lore Creator
 
 ### Obsidian içinde kurgu evrenleri kur
-#### Dallanan zaman çizgileri · sürümlenen taslaklar · kendi takvimin
+#### Dallanan zaman çizgileri · sürümlenen taslaklar · kendi zaman sistemin
 
 [English](README.md) &nbsp;·&nbsp; **Türkçe**
 
@@ -112,7 +112,7 @@ flowchart TD
 | 🌿 | **Dallanan tuval** | Yatayda zaman, dikeyde akış şeritleri, `next`/`prev` eğri çizgilerle |
 | 📝 | **Hikayeyi yeniden şekillendiren sürümler** | Her taslak kendi zamanını, akışını ve bağlantılarını taşır |
 | 📚 | **Sürüm setleri** | Bütün bir kurgu revizyonunu tek hamlede ileri geri çevir |
-| 📅 | **Kendi takvimin** | İstediğin birim, istediğin sıfır noktası, isteğe bağlı Dünya karşılığı |
+| 📅 | **Kendi zaman sistemin** | İstediğin birim, istediğin sıfır noktası, isteğe bağlı Dünya karşılığı |
 | 🗂️ | **Türler ve varlıklar** | Karakter, tür, mekân, fraksiyon, nesne, olay — kodda değil, bir notta tanımlı |
 | ⚖️ | **Yasalar** | Evren fiziği ve onu çiğneyen varlıklar, iki yönlü bağlı |
 | 💡 | **Terfi edilebilen taslaklar** | Yeri olmayan fikirler için raf; hak ettiğinde gerçek nota dönüşür |
@@ -196,7 +196,7 @@ bunlar olmasa eski taslağa dönmek, hepsini tek tek hatırlayıp çevirmek deme
 > penceresi vardır; sıralama, mevcut içerik yeni yerine ulaşmadan hiçbir şeyin
 > üzerine yazılmayacak şekilde kurulmuştur.
 
-### 📅 Kendi takvimin
+### 📅 Kendi zaman sistemin
 
 Bir evren Dünya yıllarıyla işlemek zorunda değildir.
 
@@ -207,9 +207,9 @@ time-label: "Xen Yılı 134923, 165. gün"
 earth-time: 2050           # okuyucu için isteğe bağlı referans
 ```
 
-Takvimi bir kere tanımla — birim adı, sıfır noktası, birim başına gün ve Dünya
-yıllarına nasıl karşılık geldiği — zaman seçici sayıyı ve etiketi senin yerine
-doldursun. Ya da karşılığı hiç tanımlama, etiketi kendin yaz.
+Zaman sistemini bir kere tanımla — birim adı, sıfır noktası, birim başına gün ve
+Dünya yıllarına nasıl karşılık geldiği — zaman seçici sayıyı ve etiketi senin
+yerine doldursun. Ya da karşılığı hiç tanımlama, etiketi kendin yaz.
 
 ### 🗂️ Türler ve varlıklar
 
@@ -300,7 +300,7 @@ gösterir ve var olan bir dosyanın üzerine asla yazmaz.
 
 ```
 📁 <vault>
-├── 📄 Universe.md            ← takvim, zaman çizgileri, evren geneli yasalar
+├── 📄 Universe.md            ← zaman sistemi, zaman çizgileri, evren geneli yasalar
 ├── 📁 System/
 │   ├── 📄 Types.md           ← tür kaydı: eklentiyi değil, bir notu düzenlersin
 │   └── 📄 Version sets.md
@@ -427,7 +427,7 @@ Her yol değiştirilebilir; aşağıdakiler yalnızca varsayılanlardır:
 | Sürüm setleri dosyası | `System/Version sets.md` |
 | Dışa aktarım klasörü | `Exports` |
 
-Takvim ayarları eklenti verisine değil, evren notunun frontmatter'ına yazılır;
+Zaman sistemi eklenti verisine değil, evren notunun frontmatter'ına yazılır;
 böylece bir vault eklenti kurulu olmasa bile kendini tanımlamaya devam eder. Tür
 kaydı da aynı sebeple bir notta durur.
 
