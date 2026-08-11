@@ -6,9 +6,17 @@ data.json
 .hotreload
 .DS_Store
 
-# Local agent/config files — not meant for the repo
+# Local agent/config files — not meant for the repo (public plugin repo — kişisel yönetim dosyaları hariç tutulur)
 CLAUDE.md
 .cursorrules
 development-logs/
 .claude/
+.agents/
 STATUS.md
+STATUS-ARSIV.md
+AI_RULES.md
+PROJECT_META.json
+plans/
+design/
+scripts/
+assets/
