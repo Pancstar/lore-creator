@@ -1,6 +1,7 @@
 import { App, Modal, Notice, Setting, TFile, normalizePath } from "obsidian";
 import type LorePlugin from "../main";
 import { buildNoteContent, ensureFolder, extractBody, sanitiseFileName } from "../noteFactory";
+import { enterSubmits } from "./enterSubmits";
 
 type BodyMode = "keep" | "move";
 
@@ -47,6 +48,7 @@ export class PromoteModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("promote.title"));
 

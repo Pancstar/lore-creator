@@ -9,7 +9,7 @@
 
 <br/>
 
-[![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed?style=for-the-badge&logo=obsidian&logoColor=white)](https://obsidian.md)
+[![Obsidian](https://img.shields.io/badge/Obsidian-1.13.0%2B-7c3aed?style=for-the-badge&logo=obsidian&logoColor=white)](https://obsidian.md)
 [![Sürüm](https://img.shields.io/github/v/release/PancstaR/lore-creator?style=for-the-badge&label=s%C3%BCr%C3%BCm&color=4f46e5)](https://github.com/PancstaR/lore-creator/releases/latest)
 [![Platform](https://img.shields.io/badge/Masa%C3%BCst%C3%BC%20%2B%20Mobil-0ea5e9?style=for-the-badge)](https://obsidian.md)
 [![Dil](https://img.shields.io/badge/Aray%C3%BCz-EN%20%C2%B7%20TR-f59e0b?style=for-the-badge)](#️-ayarlar)
@@ -119,6 +119,7 @@ flowchart TD
 | 🧭 | **Gezinme** | Her notun altında nereye bağlandığını gösteren çubuk ve önizleme haritası |
 | 📊 | **Pano ve tutarlılık** | Sayılar, yarım kalan her şey ve uyarı amaçlı rapor |
 | 🔍 | **Arama ve dışa aktarma** | Alanlara göre süz, seçtiklerinden tek Markdown dokümanı üret |
+| 📖 | **Eklenti içi rehber** | Obsidian içinde sade bir gezinti; SSS ve kurcalanacak örnek bir hikâyeyle |
 
 ### 🌿 Dallanan zaman çizgisi tuvali
 
@@ -155,7 +156,15 @@ flowchart LR
   çizilir (`time-uncertain`).
 - **Henüz zamanı olmayan** notlar kaybolmaz, kendi şeritlerine yerleşir.
 - Kenar rengi durumu gösterir; başka sürümü olan parçalarda bir nokta belirir.
-- Kaydır, yakınlaştır, herhangi bir nota tıklayıp geç.
+- Kaydır, yakınlaştır, herhangi bir nota tıklayıp geç. Kaydırırken şerit
+  adları ve tarihler kenarlarda sabit kalır.
+- Duruma, akışa ya da türe göre **süz** veya tuvalde **ara**: eşleşmeyenler
+  soluklaşır, hiçbir şey yer değiştirmez. Enter sonuçlar arasında gezer.
+- **Açık notu göster**, yazdığın notu hangi zaman çizgisindeyse orada bulur.
+- **Klavye:** Tab notlara ulaşır, oklar aralarında gezer, Enter açar, `+` `−`
+  yakınlaştırır, `0` sığdırır, `/` arar. Dokunmatikte iki parmakla yakınlaştır.
+- Paralel bir zaman çizgisi ana çizgiden nerede ayrıldığını ve o anı bir
+  işaretle gösterir.
 
 ### 📝 Hikayeyi yeniden şekillendiren sürümler
 
@@ -207,9 +216,15 @@ time-label: "Xen Yılı 134923, 165. gün"
 earth-time: 2050           # okuyucu için isteğe bağlı referans
 ```
 
-Zaman sistemini bir kere tanımla — birim adı, sıfır noktası, birim başına gün ve
+Zaman sistemini bir kere tanımla — birim adı, birim başına gün ve istersen
 Dünya yıllarına nasıl karşılık geldiği — zaman seçici sayıyı ve etiketi senin
 yerine doldursun. Ya da karşılığı hiç tanımlama, etiketi kendin yaz.
+
+**Zaman sistemini düzenle** (bir komut, ayarlarda da var) sistemi sonradan
+değiştirir; canlı bir örnek gösterir ve geçersiz bir değer kaydedilmeden önce
+uyarır. Tarihi olan notlar varken bir birimdeki gün sayısını değiştirirsen önce
+sorar: bu notları her biri aynı günde kalacak şekilde taşı ya da sayıları
+olduğu gibi bırak. Taşıma ya tarihli notların hepsine uygulanır ya da hiçbirine.
 
 ### 🗂️ Türler ve varlıklar
 
@@ -278,6 +293,26 @@ hiçbir şey uydurulmaz.
 | 🔍 | **Arama** | Türe, duruma, zaman çizgisine, akışa ve zaman aralığına göre süzer. Obsidian'ın kendi araması kelimeleri zaten buluyor; bu, *"ana evrende yarım kalmış tüm karakterler"* sorusunu cevaplıyor |
 | 📤 | **Dışa aktarma** | Seçtiğin bölümlerden tek bir Markdown dokümanı. Notlarda gizlilik bayrağının olmamasının sebebi budur: okuyucunun ne göreceği paylaşırken belirlenir, her notta sonsuza kadar saklanmaz |
 
+### 📖 Eklenti içi rehber
+
+Herkesin takip edebileceği dilde yazılmış bir gezinti; eklenti ilk kez
+açıldığında kendiliğinden bir kez açılır. Her ekranda bir bölüm, dört grupta —
+*Başlarken*, *Yazarken*, *Takip*, *Yardım* — küçük şemalar, ilerleme çubuğu ve
+okundu işaretleriyle. Bölümlerde anlattıkları adımı yapan düğmeler var: evreni
+kur, zamanı ayarla, not oluştur, zaman çizgisini aç.
+
+Son bölüm aranabilir bir SSS. Alan adları yalnız *Merak edenler için*
+kutularında geçer; ana metin sade kalır.
+
+**Örnek hikâye.** *Fener Bekçileri*, 13 sayfalık bir evren: iki akış, üç
+karakter, çiğnenen bir yasa, bir taslak fikir ve iki sürümlü bir not. Seçtiğin
+dilde kendi klasörüne yazılır, görünümlerde her sayfasının yanında *örnek*
+rozeti durur ve tek düğmeyle yeniden kaldırılır (çöp kutusuna gider, doğrudan
+silinmez). Ondan kopyaladığın sayfalar senin kalır.
+
+Rehberi soldaki kitap simgesinden, **Rehberi aç** komutundan ya da
+**Ayarlar → Yardım** bölümünden aç.
+
 ---
 
 ## 🚀 Başlangıç
@@ -292,11 +327,17 @@ Henüz topluluk eklenti listesinde değil. O zamana kadar:
 3. Obsidian'da: **Ayarlar → Topluluk eklentileri**, kısıtlı modu kapat, sonra
    *Lore Creator*'ı etkinleştir.
 
+> [!TIP]
+> İlk açılışta rehber kendiliğinden açılır. *Evrenini kur* bölümü sonraki iki
+> adımı birlikte yürür; kendi evrenini yazmadan önce her görünümü dolu görmek
+> için örnek hikâyeyi oluşturabilirsin.
+
 ### 🪄 Bir vault kur
 
 Komut paletinden **Bu vault'u kur** komutunu çalıştır. Görünümlerin okuduğu
 klasörleri, şablonları ve tür kaydını oluşturur — önce oluşturacağı ağacı
-gösterir ve var olan bir dosyanın üzerine asla yazmaz.
+gösterir ve var olan bir dosyanın üzerine asla yazmaz. Bir adımda zaman
+sistemini sorar: birim adı, birim başına gün ve isteğe bağlı Dünya yılı bağı.
 
 ```
 📁 <vault>
@@ -405,9 +446,12 @@ flowchart LR
 | 🪄 | Bu vault'u kur | Klasörleri, şablonları ve tür kaydını oluşturur |
 | 📄 | Yeni lore notu | Bir türün şablonundan not oluşturur |
 | 🪟 | Zaman çizgisini / yasaları / taslakları / panoyu aç | Bir görünüm açar |
+| 📖 | Rehberi aç | Eklenti içi rehberi açar |
+| 📅 | Zaman sistemini düzenle | Birimi, birim başına günü ve Dünya zamanıyla bağı değiştirir |
 | 📝 | Bu notun sürümleri | Sürümleri listeler, oluşturur, değiştirir, arşivler |
 | 📚 | Sürüm setleri | İsimli anlık görüntüleri yakalar ve uygular |
 | 🧭 | Sonraki / önceki parçaya git | Bir bağlantıyı izler; birden fazlaysa sorar |
+| 🎯 | Bu notu zaman çizgisinde göster | Zaman çizgisini açık notu ortalayarak açar |
 | 💡 | Bu taslağı terfi et | Bir eskizi gerçek nota dönüştürür |
 | 🔍 | Evrende ara | Metne göre değil, alanlara göre arar |
 | 📤 | Evreni dışa aktar | Tek bir Markdown dokümanı üretir |
@@ -429,7 +473,11 @@ Her yol değiştirilebilir; aşağıdakiler yalnızca varsayılanlardır:
 
 Zaman sistemi eklenti verisine değil, evren notunun frontmatter'ına yazılır;
 böylece bir vault eklenti kurulu olmasa bile kendini tanımlamaya devam eder. Tür
-kaydı da aynı sebeple bir notta durur.
+kaydı da aynı sebeple bir notta durur. Ayarlarda ayrıca **Zaman sistemini
+düzenle** düğmesi ve rehberi açan bir **Yardım** grubu var.
+
+Şablonlar klasöründeki notlar lore sayılmaz: zaman çizgisine, panoya, aramaya,
+dışa aktarmaya ve tutarlılık raporuna girmez.
 
 Arayüz dili Obsidian'ınkini takip eder ya da elle seçilebilir. **🇬🇧 İngilizce ve
 🇹🇷 Türkçe** dahildir. Frontmatter alan adları her dilde İngilizcedir — onlar
@@ -441,20 +489,27 @@ veri, arayüz değil.
 
 ```bash
 npm install
-npm run dev     # esbuild izler — kaydettikçe main.js yeniden üretilir
-npm run build   # tip kontrolü, sonra küçültülmüş main.js
+npm run dev     # esbuild izler — kaydettikçe dist/ yeniden üretilir
+npm run lint    # eslint-plugin-obsidianmd ile eslint
+npm run build   # tip kontrolü, lint, sonra küçültülmüş dist/main.js
 ```
 
+Her derleme `main.js`, `manifest.json` ve `styles.css` dosyalarını `dist/`
+klasörüne yazar — bir vault'un eklenti klasörünün ihtiyaç duyduğu üç dosya.
+
 Kaynaklar herhangi bir vault'un dışında durur. Eklenti üzerinde çalışmak için
-bir vault'un eklenti klasörünü bu depoya yönlendir — junction ya da symlink tek
-kopya kalmasını sağlar:
+bir vault'un eklenti klasörünü `dist/` klasörüne yönlendir — junction ya da
+symlink tek kopya kalmasını sağlar:
 
 ```bash
-# Windows, yönetici izni gerekmez
-mklink /J "<vault>\.obsidian\plugins\lore-creator" "<bu deponun yolu>"
+# Windows (cmd), yönetici izni gerekmez
+mklink /J "<vault>\.obsidian\plugins\lore-creator" "<bu deponun yolu>\dist"
+
+# Windows (PowerShell)
+New-Item -ItemType Junction -Path "<vault>\.obsidian\plugins\lore-creator" -Target "<bu deponun yolu>\dist"
 
 # macOS ve Linux
-ln -s "<bu deponun yolu>" "<vault>/.obsidian/plugins/lore-creator"
+ln -s "<bu deponun yolu>/dist" "<vault>/.obsidian/plugins/lore-creator"
 ```
 
 Obsidian eklentileri kendiliğinden yeniden yüklemez.
@@ -462,9 +517,12 @@ Obsidian eklentileri kendiliğinden yeniden yüklemez.
 alır; onsuz her değişiklikten sonra *Reload app without saving* komutunu
 çalıştır.
 
+Her push ve pull request CI'da `npm ci` ve `npm run build` çalıştırır.
+
 Sürümler, başında `v` olmadan tam olarak sürüm numarasıyla etiketlenir. Etiketi
-push etmek eklentiyi derler ve `main.js`, `manifest.json`, `styles.css`
-dosyalarını ayrı ayrı varlık olarak yayınlar — Obsidian'ın beklediği budur.
+push etmek eklentiyi derler ve `dist/` içindeki `main.js`, `manifest.json`,
+`styles.css` dosyalarını ayrı ayrı varlık olarak yayınlar — Obsidian'ın
+beklediği budur.
 
 Çalışma zamanı bağımlılığı yoktur; `main.js` içine hiçbir üçüncü parti kod
 paketlenmez.

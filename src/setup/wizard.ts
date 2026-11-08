@@ -1,6 +1,8 @@
 import { App, Modal, Notice, Setting, normalizePath } from "obsidian";
 import type LorePlugin from "../main";
 import { ensureFolder } from "../noteFactory";
+import { DEFAULT_TIME, Time } from "../universe";
+import { validateTime } from "../time";
 import {
 	FOLDER_NAMES,
 	buildRegistryNote,
@@ -20,6 +22,12 @@ export class SetupModal extends Modal {
 	private universeName = "";
 	private lang: Lang;
 	private prefixFolders = true;
+	private time: Time = { ...DEFAULT_TIME };
+	private linkEarth = false;
+	/** Raw number texts; empty or unreadable shows an error instead of a silent 0. */
+	private timeTexts = { days: "365", earthYear: "", epoch: "0", ratio: "1" };
+	private timeErrorEl: HTMLElement | null = null;
+	private earthEl: HTMLElement | null = null;
 
 	constructor(
 		app: App,
@@ -66,6 +74,8 @@ export class SetupModal extends Modal {
 				}),
 			);
 
+		this.buildTimeStep();
+
 		this.previewEl = this.contentEl.createEl("pre", { cls: "plc-setup-preview" });
 		this.refreshPreview();
 
@@ -95,9 +105,74 @@ export class SetupModal extends Modal {
 		this.previewEl.setText(lines.join("\n"));
 	}
 
+	/** Optional: skipping it all leaves an Earth-like 365-day calendar. */
+	private buildTimeStep() {
+		const t = (key: string) => this.plugin.i18n.t(key);
+
+		new Setting(this.contentEl).setName(t("setup.time")).setDesc(t("setup.time.desc")).setHeading();
+
+		new Setting(this.contentEl)
+			.setName(t("time.editor.name"))
+			.setDesc(t("time.editor.name.desc"))
+			.addText((text) => text.onChange((value) => (this.time.timeName = value)));
+		new Setting(this.contentEl)
+			.setName(t("time.editor.unit"))
+			.setDesc(t("time.editor.unit.desc"))
+			.addText((text) => text.onChange((value) => (this.time.timeUnit = value)));
+		this.timeNumber(this.contentEl, "time.editor.days", "days");
+
+		new Setting(this.contentEl)
+			.setName(t("setup.time.earth"))
+			.setDesc(t("setup.time.earth.desc"))
+			.addToggle((toggle) =>
+				toggle.setValue(this.linkEarth).onChange((value) => {
+					this.linkEarth = value;
+					this.earthEl?.toggleClass("is-hidden", !value);
+				}),
+			);
+
+		this.earthEl = this.contentEl.createDiv({ cls: "plc-setup-earth is-hidden" });
+		this.timeNumber(this.earthEl, "time.editor.earthYear", "earthYear");
+		this.timeNumber(this.earthEl, "time.editor.epoch", "epoch");
+		this.timeNumber(this.earthEl, "time.editor.ratio", "ratio");
+
+		this.timeErrorEl = this.contentEl.createDiv({ cls: "plc-time-system-error" });
+	}
+
+	private timeNumber(parent: HTMLElement, key: string, field: keyof SetupModal["timeTexts"]) {
+		const t = (k: string) => this.plugin.i18n.t(k);
+		new Setting(parent)
+			.setName(t(key))
+			.setDesc(t(`${key}.desc`))
+			.addText((text) => {
+				text.inputEl.inputMode = "decimal";
+				text.setValue(this.timeTexts[field]).onChange((value) => (this.timeTexts[field] = value));
+			});
+	}
+
+	/** Reads the step into a `Time`, or shows why it cannot be used. */
+	private readTimeStep(): Time | null {
+		const t = (key: string) => this.plugin.i18n.t(key);
+		const num = (text: string) => (text.trim() ? Number(text.trim()) : Number.NaN);
+
+		const time: Time = { ...this.time, timeDays: num(this.timeTexts.days) };
+		if (this.linkEarth && this.timeTexts.earthYear.trim()) {
+			time.earthEpoch = num(this.timeTexts.earthYear);
+			time.timeEpoch = num(this.timeTexts.epoch);
+			time.earthRatio = num(this.timeTexts.ratio);
+		}
+
+		const issues = validateTime(time);
+		this.timeErrorEl?.setText(issues.map((issue) => t(`time.editor.error.${issue}`)).join(" "));
+		return issues.length === 0 ? time : null;
+	}
+
 	private async run() {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		const name = this.universeName.trim() || t("setup.untitled");
+
+		const time = this.readTimeStep();
+		if (!time) return;
 
 		try {
 			const folders = FOLDER_NAMES[this.lang];
@@ -123,7 +198,7 @@ export class SetupModal extends Modal {
 			let created = 0;
 			created += await this.write(
 				this.plugin.settings.universeFile,
-				buildUniverseNote(name, this.plugin.i18n),
+				buildUniverseNote(name, this.plugin.i18n, time),
 			);
 			created += await this.write(
 				this.plugin.settings.registryFile,

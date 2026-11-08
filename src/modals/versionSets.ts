@@ -1,13 +1,19 @@
 import { App, Modal, Notice, Setting, setIcon } from "obsidian";
 import type LorePlugin from "../main";
-import { VersionSet } from "../versions/sets";
+import type { VersionSet, VersionSetStore } from "../versions/sets";
 import { ConfirmModal } from "./confirm";
+import { LiveRefresh } from "./liveRefresh";
+import { enterSubmits } from "./enterSubmits";
+
+type ApplyResult = Awaited<ReturnType<VersionSetStore["apply"]>>;
 
 /**
  * Manages named snapshots of which version of each note is active, so a whole
  * revision of the story can be stepped into and out of in one move.
  */
 export class VersionSetsModal extends Modal {
+	private live = new LiveRefresh(this.app, () => this.renderBody());
+
 	constructor(
 		app: App,
 		private plugin: LorePlugin,
@@ -16,8 +22,10 @@ export class VersionSetsModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.plugin.i18n.t("sets.title"));
 		this.contentEl.addClass("plc-versions");
+		this.live.start();
 		this.renderBody();
 	}
 
@@ -109,9 +117,10 @@ export class VersionSetsModal extends Modal {
 		}
 
 		try {
-			await this.plugin.versionSets.capture(name);
-			new Notice(t("sets.captured", name));
-			this.renderBody();
+			const ran = await this.live.run(async () => {
+				await this.plugin.versionSets.capture(name);
+			});
+			if (ran) new Notice(t("sets.captured", name));
 		} catch (error) {
 			console.error("Lore Creator: could not capture version set", error);
 			new Notice(t("version.error.generic"));
@@ -120,6 +129,7 @@ export class VersionSetsModal extends Modal {
 
 	private confirmApply(set: VersionSet) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		if (this.live.busy) return;
 		const plan = this.plugin.versionSets.plan(set);
 
 		// Applying a set moves several files at once, so the dialog spells out
@@ -145,8 +155,18 @@ export class VersionSetsModal extends Modal {
 
 	private async runApply(set: VersionSet) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		const plan = this.plugin.versionSets.plan(set);
-		const result = await this.plugin.versionSets.apply(plan);
+		const outcome: { result: ApplyResult | null } = { result: null };
+		try {
+			await this.live.run(async () => {
+				outcome.result = await this.plugin.versionSets.apply(this.plugin.versionSets.plan(set));
+			});
+		} catch (error) {
+			console.error("Lore Creator: could not apply version set", error);
+			new Notice(t("version.error.generic"));
+			return;
+		}
+		const result = outcome.result;
+		if (!result) return;
 
 		if (result.failed) {
 			console.error("Lore Creator: applying set stopped early", result.error);
@@ -157,11 +177,11 @@ export class VersionSetsModal extends Modal {
 		} else {
 			new Notice(t("sets.applied", String(result.applied)));
 		}
-		this.renderBody();
 	}
 
 	private confirmDelete(set: VersionSet) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		if (this.live.busy) return;
 
 		new ConfirmModal(
 			this.app,
@@ -180,9 +200,8 @@ export class VersionSetsModal extends Modal {
 	private async runDelete(set: VersionSet) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		try {
-			await this.plugin.versionSets.remove(set.id);
-			new Notice(t("sets.deleted"));
-			this.renderBody();
+			const ran = await this.live.run(() => this.plugin.versionSets.remove(set.id));
+			if (ran) new Notice(t("sets.deleted"));
 		} catch (error) {
 			console.error("Lore Creator: could not delete version set", error);
 			new Notice(t("version.error.generic"));
@@ -190,6 +209,7 @@ export class VersionSetsModal extends Modal {
 	}
 
 	onClose() {
+		this.live.stop();
 		this.contentEl.empty();
 	}
 }

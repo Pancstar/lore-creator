@@ -143,6 +143,37 @@
 	border-style: dashed;
 }
 
+/* Per-kind toggles for the consistency report. */
+.plc-audit-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+	margin: var(--size-2-2) 0 var(--size-4-2);
+}
+
+.plc-chip {
+	padding: 0 var(--size-4-2);
+	height: auto;
+	line-height: 1.6;
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-l);
+	border: 1px solid var(--color-orange);
+	background-color: transparent;
+	color: var(--text-normal);
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.plc-chip:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.plc-chip.is-off {
+	border-color: var(--background-modifier-border);
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
 /* --- Dashboard stats -------------------------------------------------- */
 
 .plc-stat-grid {
@@ -225,11 +256,14 @@
 
 /* --- Note banner ----------------------------------------------------- */
 
-/* The plugin banner already surfaces icon/status/time, so the native
-   in-document properties block is redundant noise on every open note.
-   It stays reachable via the right-sidebar "File properties" view. */
-.markdown-source-view .metadata-container,
-.markdown-reading-view .metadata-container {
+/* On lore notes the plugin banner already surfaces icon/status/time, so the
+   native in-document properties block is redundant noise there. Plain notes
+   keep it. It stays reachable via the right-sidebar "File properties" view. */
+/* Obsidian's own rule (`.markdown-source-view.is-live-preview.show-properties
+   .metadata-container:not(.mod-error)`) is specific; these match it class for
+   class, plus the lore-note scope, so they win. */
+.plc-lore-note .markdown-source-view.is-live-preview.show-properties .metadata-container:not(.mod-error),
+.plc-lore-note .markdown-preview-view.show-properties .metadata-container:not(.mod-error) {
 	display: none;
 }
 
@@ -382,10 +416,148 @@ button.plc-badge {
 	padding: var(--size-2-3) var(--size-4-3);
 	border-bottom: 1px solid var(--background-modifier-border);
 	flex: 0 0 auto;
+	flex-wrap: wrap;
+}
+
+.plc-timeline-toolbar-main {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-2-2);
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.plc-timeline-search {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	flex: 0 1 14rem;
+}
+
+.plc-timeline-search.is-hidden {
+	display: none;
+}
+
+.plc-timeline-search input {
+	width: 100%;
+	min-width: 6rem;
+}
+
+.plc-timeline-counter {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
+.plc-timeline-counter.is-empty {
+	color: var(--text-error);
 }
 
 .plc-timeline-spacer {
 	flex: 1 1 auto;
+}
+
+/* Archived version open: a slim bar pointing back to the live note. */
+.plc-navbar.is-archive {
+	justify-content: space-between;
+	background: var(--background-secondary);
+	color: var(--text-muted);
+}
+
+.plc-navbar.is-archive .plc-navbar-context {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-1);
+}
+
+/* Touch: bigger targets, search on its own row, the map only when pinned. */
+.is-mobile .plc-timeline-button {
+	padding: var(--size-4-2);
+}
+
+.is-mobile .plc-timeline-search {
+	flex: 1 1 100%;
+}
+
+.is-mobile .plc-minimap:not(.is-pinned) {
+	display: none;
+}
+
+.plc-timeline-divergence {
+	padding: var(--size-2-1) var(--size-4-3);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex: 0 0 auto;
+}
+
+.plc-timeline-divergence.is-hidden {
+	display: none;
+}
+
+.plc-timeline-divergence a {
+	cursor: pointer;
+}
+
+.plc-divergence-line {
+	pointer-events: none;
+	stroke: var(--color-purple);
+	stroke-width: 1.5;
+	stroke-dasharray: 6 4;
+}
+
+.plc-divergence-label {
+	fill: var(--color-purple);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.plc-node-lucide {
+	color: var(--text-normal);
+}
+
+.plc-timeline-canvas:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+
+.plc-node {
+	outline: none;
+}
+
+.plc-node:focus-visible .plc-node-box {
+	stroke: var(--interactive-accent);
+	stroke-width: 3;
+	stroke-dasharray: none;
+}
+
+/* Filter and search dim what they leave out; nothing moves. */
+.plc-node.is-dimmed,
+.plc-edge.is-dimmed {
+	opacity: 0.18;
+}
+
+.plc-node.is-match .plc-node-box {
+	stroke: var(--interactive-accent);
+	stroke-width: 2;
+}
+
+.plc-node.is-current-match .plc-node-box,
+.plc-node.is-pulse .plc-node-box {
+	stroke: var(--interactive-accent);
+	stroke-width: 3;
+	filter: drop-shadow(0 0 6px var(--interactive-accent));
+}
+
+.plc-node.is-pulse {
+	animation: plc-pulse 0.4s ease-in-out 3;
+}
+
+@keyframes plc-pulse {
+	50% {
+		opacity: 0.55;
+	}
 }
 
 .plc-timeline-select {
@@ -474,9 +646,26 @@ button.plc-badge {
 	font-weight: 600;
 }
 
-.plc-tick[transform]:not([transform="translate(0, 0)"]) .plc-axis-grid {
+.plc-axis-grid.is-moving {
 	stroke: var(--interactive-accent);
 	opacity: 0.9;
+}
+
+/* Pinned strips: opaque so the scene slides underneath them. */
+.plc-pinned-strip,
+.plc-pinned-corner {
+	fill: var(--background-primary);
+}
+
+.plc-pinned-lanes .plc-pinned-strip {
+	stroke: var(--background-modifier-border);
+	stroke-width: 1;
+	vector-effect: non-scaling-stroke;
+}
+
+/* A note brought into view stays visible even when the filter dims it. */
+.plc-node.is-dimmed.is-pulse {
+	opacity: 1;
 }
 
 .plc-edge {
@@ -907,4 +1096,286 @@ button.plc-badge-version:hover {
 	display: flex;
 	justify-content: flex-end;
 	margin-top: var(--size-4-2);
+}
+
+/* --- Time system editor ------------------------------------------------ */
+
+.plc-time-system-earth.is-hidden {
+	display: none;
+}
+
+.plc-time-system-error {
+	color: var(--text-error);
+	margin-top: var(--size-4-1);
+}
+
+.plc-time-system-error:empty {
+	display: none;
+}
+
+.plc-time-system-preview {
+	margin: var(--size-4-3) 0;
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.plc-time-system-preview:empty {
+	display: none;
+}
+
+.plc-time-picker .plc-link-button {
+	background: none;
+	box-shadow: none;
+	border: none;
+	padding: 0;
+	height: auto;
+	color: var(--text-accent);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+}
+
+.plc-time-picker .plc-link-button:hover {
+	text-decoration: underline;
+}
+
+.plc-setup-earth.is-hidden {
+	display: none;
+}
+
+/* --- Guide ---------------------------------------------------------------- */
+
+.plc-guide.view-content {
+	display: flex;
+	gap: 0;
+	padding: 0;
+}
+
+.plc-guide-menu {
+	flex: 0 0 220px;
+	overflow-y: auto;
+	padding: var(--size-4-4) var(--size-4-2);
+	border-right: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.plc-guide-group {
+	margin: var(--size-4-3) var(--size-4-2) var(--size-4-1);
+	font-size: var(--font-ui-smaller);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--text-faint);
+}
+
+.plc-guide .plc-guide-item {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	width: 100%;
+	height: auto;
+	padding: var(--size-4-1) var(--size-4-2);
+	background-color: transparent;
+	box-shadow: none;
+	border: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	text-align: left;
+	justify-content: flex-start;
+	white-space: normal;
+}
+
+.plc-guide .plc-guide-item:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.plc-guide .plc-guide-item.is-active {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+}
+
+.plc-guide-mark {
+	flex: 0 0 1.2em;
+	display: inline-flex;
+	justify-content: center;
+	--icon-size: var(--icon-s);
+}
+
+.plc-guide-page {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: var(--size-4-6) var(--size-4-8);
+	max-width: 720px;
+	line-height: var(--line-height-normal);
+}
+
+.plc-guide-page h2 {
+	margin-top: var(--size-4-2);
+}
+
+.plc-guide-progress {
+	display: flex;
+	gap: 4px;
+}
+
+.plc-guide-progress span {
+	flex: 1;
+	height: 5px;
+	border-radius: 3px;
+	background: var(--background-modifier-border);
+}
+
+.plc-guide-progress span.is-done {
+	background: var(--interactive-accent);
+}
+
+.plc-guide-meta {
+	margin-top: var(--size-4-1);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.plc-guide-tip,
+.plc-guide-state {
+	margin: var(--size-4-3) 0;
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-s);
+}
+
+.plc-guide-tip {
+	border-left: 3px solid var(--interactive-accent);
+	background: var(--background-secondary);
+}
+
+.plc-guide-state {
+	border-left: 3px solid var(--color-green);
+	background: rgba(var(--color-green-rgb), 0.12);
+}
+
+.plc-guide-action {
+	margin: var(--size-4-2) var(--size-4-2) var(--size-4-2) 0;
+}
+
+.plc-guide-curious,
+.plc-guide-question {
+	margin: var(--size-4-3) 0;
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.plc-guide-curious summary,
+.plc-guide-question summary {
+	cursor: pointer;
+	color: var(--text-muted);
+}
+
+.plc-guide-question summary {
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+}
+
+.plc-guide-search {
+	width: 100%;
+	margin: var(--size-4-3) 0;
+}
+
+.plc-guide-nav {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-8);
+	padding-top: var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.plc-guide.is-narrow {
+	flex-direction: column;
+}
+
+.plc-guide.is-narrow .plc-guide-menu {
+	flex: 0 0 auto;
+	max-height: 40%;
+	border-right: none;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.plc-guide.is-narrow .plc-guide-page {
+	padding: var(--size-4-4);
+}
+
+.plc-guide-diagram-wrap {
+	margin: var(--size-4-3) 0;
+	padding: var(--size-4-2);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+
+.plc-guide-diagram {
+	display: block;
+	width: 100%;
+	max-width: 420px;
+	height: auto;
+	margin: 0 auto;
+}
+
+.plc-gd-box {
+	fill: var(--background-primary);
+	stroke: var(--interactive-accent);
+	stroke-width: 1.5;
+}
+
+.plc-gd-box.is-shelf {
+	stroke: var(--background-modifier-border);
+}
+
+.plc-gd-box.is-old {
+	stroke: var(--text-faint);
+	stroke-dasharray: 4 3;
+}
+
+.plc-gd-cupboard {
+	fill: none;
+	stroke: var(--text-muted);
+	stroke-width: 1.5;
+}
+
+.plc-gd-text,
+.plc-gd-title,
+.plc-gd-lane {
+	fill: var(--text-normal);
+	font-size: 12px;
+}
+
+.plc-gd-title,
+.plc-gd-lane {
+	font-weight: var(--font-semibold);
+}
+
+.plc-gd-small {
+	fill: var(--text-muted);
+	font-size: 11px;
+}
+
+.plc-gd-line {
+	stroke: var(--background-modifier-border);
+	stroke-width: 2;
+	stroke-dasharray: 6 4;
+}
+
+.plc-gd-arrow {
+	stroke: var(--text-muted);
+	stroke-width: 1.5;
+}
+
+.plc-gd-head {
+	fill: var(--text-muted);
+}
+
+.plc-badge.plc-badge-example {
+	background: rgba(var(--color-cyan-rgb), 0.15);
+	color: var(--color-cyan);
 }

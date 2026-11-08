@@ -1,8 +1,19 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
+import { ItemView, Menu, Notice, TFile, ViewStateResult, WorkspaceLeaf, getIcon, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { VersionSetsModal } from "../modals/versionSets";
 import { LaneEditModal } from "../modals/laneEdit";
-import { TimelineModel, TimelineDefinition, TimelineNode } from "./model";
+import { NodeStatus, TimelineModel, TimelineDefinition, TimelineNode } from "./model";
+import {
+	EMPTY_FILTER,
+	TimelineFilter,
+	divergenceMoment,
+	isFiltering,
+	neighbour,
+	nodeMatches,
+	pruneFilter,
+	searchMatches,
+} from "./interaction";
+import { asString } from "../frontmatter";
 import {
 	AXIS_HEIGHT,
 	CANVAS_PADDING,
@@ -15,7 +26,7 @@ import {
 	laneAt,
 	timeAt,
 } from "./layout";
-import { isTimePrecision } from "../time";
+import { TimePrecision, isTimePrecision } from "../time";
 
 export const VIEW_TYPE_TIMELINE = "plc-timeline";
 
@@ -27,6 +38,10 @@ const MAX_DENSITY = 20;
 const MIN_LABEL_GAP = 64;
 /** Pixels of travel before a press counts as a pan rather than a click. */
 const DRAG_THRESHOLD = 4;
+/** Times closer than this are the same moment (below shift-drag's 1e-6 step). */
+const TIME_EPSILON = 1e-7;
+/** How long a finger must rest on a note before it can be moved. */
+const LONG_PRESS_MS = 400;
 
 interface DragCompanion {
 	entry: PlacedNode;
@@ -39,7 +54,7 @@ interface NodeDrag {
 	/** Notes sharing this exact moment, carried along to keep them simultaneous. */
 	companions: DragCompanion[];
 	/** The axis column for the moment being moved, carried along with it. */
-	tick: { el: SVGGElement; label: string } | null;
+	tick: { el: TickEls; label: string } | null;
 	guide: SVGLineElement | null;
 	startX: number;
 	startY: number;
@@ -52,6 +67,38 @@ interface NodeDrag {
 	/** True while alt is held, leaving the companions where they are. */
 	solo: boolean;
 	cancelled: boolean;
+}
+
+/**
+ * One moment on the axis. The grid line runs through the scene, the label sits
+ * in the pinned axis strip; a drag moves both.
+ */
+interface TickEls {
+	grid: SVGLineElement;
+	label: SVGGElement;
+}
+
+/** Far enough to cover any canvas in the pinned strips' own direction. */
+const STRIP_REACH = 100000;
+
+const STATUSES: NodeStatus[] = ["draft", "partial", "done"];
+
+/** Reads a saved filter back, dropping anything that is not a list of strings. */
+function readFilter(value: unknown): TimelineFilter {
+	const record = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+	const strings = (entry: unknown) =>
+		Array.isArray(entry) ? entry.filter((item): item is string => typeof item === "string") : [];
+	return {
+		statuses: strings(record.statuses).filter((status): status is NodeStatus =>
+			STATUSES.includes(status as NodeStatus),
+		),
+		flows: strings(record.flows),
+		types: strings(record.types),
+	};
+}
+
+function toggled<T>(list: T[], value: T): T[] {
+	return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
 }
 
 function svgEl<K extends keyof SVGElementTagNameMap>(
@@ -77,14 +124,46 @@ export class TimelineView extends ItemView {
 	private canvasEl!: HTMLElement;
 	private svg: SVGSVGElement | null = null;
 	private sceneEl: SVGGElement | null = null;
+	/** Lane names: follow vertical pan only, so they stay at the left edge. */
+	private lanesLayerEl: SVGGElement | null = null;
+	/** Time labels: follow horizontal pan only, so they stay at the top edge. */
+	private axisLayerEl: SVGGElement | null = null;
+	/** Covers the corner where the two pinned strips meet. */
+	private cornerEl: SVGRectElement | null = null;
+	/**
+	 * Labels in the pinned strips. The strips never grow past their zoom-1 size,
+	 * so these are placed by hand to stay level with the scene they describe.
+	 */
+	private pinnedEls: { el: SVGTextElement; axis: "x" | "y"; at: number }[] = [];
 	private hintEl: HTMLElement | null = null;
 	private layout: Layout | null = null;
-	private redrawQueued = false;
+	private redrawTimer: number | null = null;
 	/** Set while a pan is in progress, so the trailing click is not treated as one. */
 	private panned = false;
 	private drag: NodeDrag | null = null;
 	private nodeEls = new Map<string, SVGGElement>();
-	private tickEls = new Map<number, SVGGElement>();
+	private edgeEls: { from: string; to: string; el: SVGPathElement }[] = [];
+	private tickEls = new Map<number, TickEls>();
+
+	/** What the canvas is narrowed to; saved with the view, never with the notes. */
+	private filter: TimelineFilter = { ...EMPTY_FILTER };
+	/** Search text: transient, so a reopened timeline starts unfiltered by it. */
+	private query = "";
+	private matchIndex = -1;
+	/** The rebuilt part of the toolbar; the search box lives outside it to keep focus. */
+	private toolbarMainEl!: HTMLElement;
+	private searchWrapEl!: HTMLElement;
+	private searchEl!: HTMLInputElement;
+	private counterEl!: HTMLElement;
+	private filterButtonEl: HTMLButtonElement | null = null;
+	/** Pending long press on a note under a finger; a drag starts only when it fires. */
+	private longPressTimer: number | null = null;
+	/** The note holding keyboard focus, so a redraw can hand it back. */
+	private focusedPath: string | null = null;
+	/** "Split from …" under the toolbar, for a parallel timeline. */
+	private divergenceEl!: HTMLElement;
+	/** When the shown timeline split from its parent, if that is known. */
+	private divergenceTime: number | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -109,19 +188,58 @@ export class TimelineView extends ItemView {
 	async onOpen() {
 		this.contentEl.addClass("plc-timeline-view");
 		this.toolbarEl = this.contentEl.createDiv({ cls: "plc-timeline-toolbar" });
-		this.canvasEl = this.contentEl.createDiv({ cls: "plc-timeline-canvas" });
+		this.toolbarMainEl = this.toolbarEl.createDiv({ cls: "plc-timeline-toolbar-main" });
+		this.buildSearch();
+		this.divergenceEl = this.contentEl.createDiv({ cls: "plc-timeline-divergence" });
+		this.canvasEl = this.contentEl.createDiv({
+			cls: "plc-timeline-canvas",
+			attr: { tabindex: "0", "aria-label": this.plugin.i18n.t("timeline.keys") },
+		});
 		this.registerCanvasGestures();
+		this.registerKeyboard();
 		this.render();
 	}
 
 	/** Coalesces bursts of metadata events into a single redraw. */
 	queueRender() {
-		if (this.redrawQueued) return;
-		this.redrawQueued = true;
-		window.setTimeout(() => {
-			this.redrawQueued = false;
+		if (this.redrawTimer !== null) return;
+		this.redrawTimer = window.setTimeout(() => {
+			this.redrawTimer = null;
+			// Redrawing mid-drag would pull the boxes out from under the pointer;
+			// wait until the drop, which redraws anyway.
+			if (this.drag) {
+				this.queueRender();
+				return;
+			}
 			this.render();
 		}, 120);
+	}
+
+	/** Remembers the chosen timeline and the camera across restarts. */
+	getState(): Record<string, unknown> {
+		return {
+			...super.getState(),
+			timelineId: this.timelineId,
+			zoom: this.zoom,
+			panX: this.panX,
+			panY: this.panY,
+			filter: this.filter,
+		};
+	}
+
+	async setState(state: unknown, result: ViewStateResult): Promise<void> {
+		const saved = (state ?? {}) as Record<string, unknown>;
+		if (typeof saved.timelineId === "string") this.timelineId = saved.timelineId;
+		if (typeof saved.zoom === "number" && Number.isFinite(saved.zoom)) {
+			this.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, saved.zoom));
+		}
+		if (typeof saved.panX === "number" && Number.isFinite(saved.panX)) this.panX = saved.panX;
+		if (typeof saved.panY === "number" && Number.isFinite(saved.panY)) this.panY = saved.panY;
+		if (saved.filter !== undefined) this.filter = readFilter(saved.filter);
+
+		await super.setState(state, result);
+		// State can arrive after the view has already drawn its defaults.
+		if (this.canvasEl) this.render();
 	}
 
 	render() {
@@ -139,16 +257,75 @@ export class TimelineView extends ItemView {
 		this.timelineId ??= definitions[0]?.id ?? orphanIds[0] ?? null;
 
 		this.renderToolbar(definitions, orphanIds);
+		this.renderDivergence(definitions);
 		this.renderCanvas(definitions);
 	}
 
+	/**
+	 * Where a parallel timeline left its parent: the parent's name (a click
+	 * switches to it) and the note it split at. Shows whatever is known; an
+	 * unknown parent or an untimed point just means less is said.
+	 */
+	private renderDivergence(definitions: TimelineDefinition[]) {
+		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		this.divergenceEl.empty();
+		this.divergenceTime = null;
+
+		const definition = definitions.find((entry) => entry.id === this.timelineId);
+		this.divergenceEl.toggleClass("is-hidden", !definition?.divergesFrom);
+		if (!definition?.divergesFrom) return;
+
+		const parentId = this.model.resolveTimelineId(definition.divergesFrom, definition.file.path);
+		const parent = definitions.find((entry) => entry.id === parentId);
+
+		const [before, after] = t("timeline.divergedFrom", "\u0000").split("\u0000");
+		this.divergenceEl.createSpan({ text: before });
+		if (parent) {
+			const link = this.divergenceEl.createEl("a", { text: parent.name, cls: "plc-divergence-parent" });
+			link.addEventListener("click", (event) => {
+				event.preventDefault();
+				this.timelineId = parent.id;
+				this.resetPan();
+				this.render();
+				this.app.workspace.requestSaveLayout();
+			});
+		} else {
+			this.divergenceEl.createSpan({ text: definition.divergesFrom });
+		}
+		if (after) this.divergenceEl.createSpan({ text: after });
+
+		if (!definition.divergencePoint) return;
+		const pointFile = this.app.metadataCache.getFirstLinkpathDest(definition.divergencePoint, definition.file.path);
+		const point = pointFile
+			? this.model.graph(parentId).nodes.find((node) => node.path === pointFile.path)
+			: undefined;
+		this.divergenceTime = divergenceMoment(point);
+
+		this.divergenceEl.createSpan({ text: " · " });
+		const pointEl = this.divergenceEl.createEl(pointFile ? "a" : "span", {
+			text: pointFile?.basename ?? definition.divergencePoint,
+		});
+		if (pointFile) {
+			pointEl.addEventListener("click", (event) => {
+				event.preventDefault();
+				void this.app.workspace.getLeaf(false).openFile(pointFile);
+			});
+		}
+		if (point && this.divergenceTime !== null) {
+			const when = point.timeLabel || this.formatNodeTime(this.divergenceTime, point.precision);
+			this.divergenceEl.createSpan({ cls: "plc-divergence-time", text: ` (${when})` });
+		}
+	}
+
 	private renderToolbar(definitions: TimelineDefinition[], orphanIds: string[]) {
-		this.toolbarEl.empty();
+		this.toolbarMainEl.empty();
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 
-		if (definitions.length === 0 && orphanIds.length === 0) return;
+		const empty = definitions.length === 0 && orphanIds.length === 0;
+		this.searchWrapEl.toggleClass("is-hidden", empty);
+		if (empty) return;
 
-		const select = this.toolbarEl.createEl("select", { cls: "dropdown plc-timeline-select" });
+		const select = this.toolbarMainEl.createEl("select", { cls: "dropdown plc-timeline-select" });
 		for (const definition of definitions) {
 			const suffix = definition.kind === "parallel" ? ` · ${t("timeline.parallel")}` : "";
 			select.createEl("option", { value: definition.id, text: `${definition.name}${suffix}` });
@@ -161,10 +338,19 @@ export class TimelineView extends ItemView {
 			this.timelineId = select.value;
 			this.resetPan();
 			this.render();
+			this.app.workspace.requestSaveLayout();
 		});
 
-		const spacer = this.toolbarEl.createDiv({ cls: "plc-timeline-spacer" });
+		const spacer = this.toolbarMainEl.createDiv({ cls: "plc-timeline-spacer" });
 		spacer.setAttr("aria-hidden", "true");
+
+		this.addToolbarButton("crosshair", t("timeline.showCurrent"), () => this.showActiveNote());
+		this.filterButtonEl = this.addToolbarButton(
+			"filter",
+			t("timeline.filter"),
+			(event) => this.openFilterMenu(event),
+			isFiltering(this.filter, ""),
+		);
 
 		const locked = this.plugin.settings.timelineLocked;
 		this.addToolbarButton(
@@ -206,19 +392,252 @@ export class TimelineView extends ItemView {
 		this.render();
 	}
 
-	private addToolbarButton(icon: string, label: string, onClick: () => void, active = false) {
-		const button = this.toolbarEl.createEl("button", {
+	private addToolbarButton(
+		icon: string,
+		label: string,
+		onClick: (event: MouseEvent) => void,
+		active = false,
+	): HTMLButtonElement {
+		const button = this.toolbarMainEl.createEl("button", {
 			cls: `clickable-icon plc-timeline-button${active ? " is-active" : ""}`,
 			attr: { "aria-label": label, title: label },
 		});
 		setIcon(button, icon);
 		button.addEventListener("click", onClick);
+		return button;
+	}
+
+	/**
+	 * The search box is built once and kept out of the rebuilt toolbar, so an
+	 * autosave redraw while typing does not steal the caret.
+	 */
+	private buildSearch() {
+		const t = (key: string) => this.plugin.i18n.t(key);
+		this.searchWrapEl = this.toolbarEl.createDiv({ cls: "plc-timeline-search" });
+		this.searchEl = this.searchWrapEl.createEl("input", {
+			type: "search",
+			attr: { placeholder: t("timeline.search"), "aria-label": t("timeline.search") },
+		});
+		this.counterEl = this.searchWrapEl.createSpan({ cls: "plc-timeline-counter" });
+
+		this.searchEl.addEventListener("input", () => {
+			this.query = this.searchEl.value;
+			this.matchIndex = -1;
+			this.applyHighlight();
+			this.stepMatch(1);
+		});
+		this.searchEl.addEventListener("keydown", (event) => {
+			// Keys typed here belong to the box, not to the canvas shortcuts.
+			event.stopPropagation();
+			if (event.key === "Enter") {
+				event.preventDefault();
+				this.stepMatch(event.shiftKey ? -1 : 1);
+			} else if (event.key === "Escape") {
+				event.preventDefault();
+				this.searchEl.value = "";
+				this.query = "";
+				this.matchIndex = -1;
+				this.applyHighlight();
+				this.canvasEl.focus();
+			}
+		});
+	}
+
+	/** Moves to the next (or previous) search hit and brings it into view. */
+	private stepMatch(direction: 1 | -1) {
+		const matches = this.layout ? searchMatches(this.layout.placed, this.query, this.filter) : [];
+		if (matches.length === 0) {
+			this.matchIndex = -1;
+			this.updateCounter(matches.length);
+			return;
+		}
+		this.matchIndex = (this.matchIndex + direction + matches.length) % matches.length;
+		this.updateCounter(matches.length);
+		const path = matches[this.matchIndex];
+		for (const [nodePath, el] of this.nodeEls) el.toggleClass("is-current-match", nodePath === path);
+		this.centreOn(path);
+	}
+
+	private updateCounter(total: number) {
+		const hasQuery = this.query.trim().length > 0;
+		this.counterEl.setText(
+			hasQuery ? this.plugin.i18n.t("timeline.matches", String(this.matchIndex + 1), String(total)) : "",
+		);
+		this.counterEl.toggleClass("is-empty", hasQuery && total === 0);
+	}
+
+	/**
+	 * Dims what the filter and search leave out. The layout never changes, so
+	 * the shape of the story stays recognisable while narrowing it down.
+	 */
+	private applyHighlight() {
+		if (!this.layout) return;
+		const filtering = isFiltering(this.filter, this.query);
+		const ordered = searchMatches(this.layout.placed, this.query, this.filter);
+		const hits = new Set(ordered);
+		const dimmed = new Set<string>();
+		// A redraw keeps the current hit if it is still one; otherwise none is current.
+		if (this.matchIndex >= ordered.length) this.matchIndex = ordered.length - 1;
+		const current = this.matchIndex >= 0 ? ordered[this.matchIndex] : null;
+
+		for (const entry of this.layout.placed) {
+			const el = this.nodeEls.get(entry.node.path);
+			if (!el) continue;
+			const dim = filtering && !nodeMatches(entry.node, this.filter, this.query);
+			if (dim) dimmed.add(entry.node.path);
+			el.toggleClass("is-dimmed", dim);
+			el.toggleClass("is-match", hits.has(entry.node.path));
+			el.toggleClass("is-current-match", entry.node.path === current);
+		}
+		this.filterButtonEl?.toggleClass("is-active", isFiltering(this.filter, ""));
+		for (const edge of this.edgeEls) {
+			edge.el.toggleClass("is-dimmed", dimmed.has(edge.from) || dimmed.has(edge.to));
+		}
+		this.updateCounter(hits.size);
+	}
+
+	private openFilterMenu(event: MouseEvent) {
+		const t = (key: string) => this.plugin.i18n.t(key);
+		const layout = this.layout;
+		if (!layout) return;
+		const menu = new Menu();
+
+		const heading = (key: string) =>
+			menu.addItem((item) => item.setTitle(t(key)).setIsLabel(true));
+		const option = (title: string, checked: boolean, toggle: () => void) =>
+			menu.addItem((item) =>
+				item
+					.setTitle(title)
+					.setChecked(checked)
+					.onClick(() => {
+						toggle();
+						this.filterChanged();
+					}),
+			);
+
+		heading("timeline.filter.status");
+		for (const status of STATUSES) {
+			option(t(`status.${status}`), this.filter.statuses.includes(status), () => {
+				this.filter = { ...this.filter, statuses: toggled(this.filter.statuses, status) };
+			});
+		}
+
+		menu.addSeparator();
+		heading("timeline.filter.flow");
+		for (const lane of layout.lanes.filter((entry) => !entry.untimed)) {
+			option(lane.name, this.filter.flows.includes(lane.id), () => {
+				this.filter = { ...this.filter, flows: toggled(this.filter.flows, lane.id) };
+			});
+		}
+
+		const types = [...new Set(layout.placed.map((entry) => entry.node.type).filter((type) => type))].sort();
+		if (types.length > 0) {
+			menu.addSeparator();
+			heading("timeline.filter.type");
+			for (const type of types) {
+				const definition = this.plugin.types.byId(type);
+				const label = definition ? this.plugin.types.label(definition, this.plugin.language) : type;
+				option(label, this.filter.types.includes(type), () => {
+					this.filter = { ...this.filter, types: toggled(this.filter.types, type) };
+				});
+			}
+		}
+
+		if (isFiltering(this.filter, "")) {
+			menu.addSeparator();
+			menu.addItem((item) =>
+				item
+					.setTitle(t("timeline.filter.clear"))
+					.setIcon("x")
+					.onClick(() => {
+						this.filter = { ...EMPTY_FILTER };
+						this.filterChanged();
+					}),
+			);
+		}
+
+		// Anchored to the button, so a keyboard press does not open it at 0,0.
+		const anchor = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect();
+		if (anchor) menu.showAtPosition({ x: anchor.left, y: anchor.bottom });
+		else menu.showAtMouseEvent(event);
+	}
+
+	/** Only the highlight changes; the layout and the toolbar stay as they are. */
+	private filterChanged() {
+		this.matchIndex = -1;
+		this.applyHighlight();
+		this.app.workspace.requestSaveLayout();
+	}
+
+	/** Pans so a note sits in the middle of the canvas. */
+	private centreOn(path: string) {
+		const entry = this.layout?.placed.find((placed) => placed.node.path === path);
+		if (!entry) return;
+		const rect = this.canvasEl.getBoundingClientRect();
+		if (rect.width === 0 || rect.height === 0) return;
+		this.panX = rect.width / 2 - (entry.x + entry.width / 2) * this.zoom;
+		this.panY = rect.height / 2 - (entry.y + entry.height / 2) * this.zoom;
+		this.applyTransform();
+	}
+
+	/** The toolbar's crosshair: the note open in the editor, wherever it sits. */
+	private showActiveNote() {
+		const file = this.app.workspace.getActiveFile();
+		if (!file || !this.showNote(file)) {
+			new Notice(this.plugin.i18n.t("timeline.notOnTimeline"));
+		}
+	}
+
+	/**
+	 * Switches to the note's timeline, centres it and makes it pulse once.
+	 * False when the note is not on any timeline.
+	 */
+	showNote(file: TFile): boolean {
+		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+		const timelineId = asString(frontmatter?.timeline).trim();
+		if (!timelineId || frontmatter?.["version-of"]) return false;
+		// Leave the current timeline alone unless the note will actually be drawn.
+		if (!this.model.graph(timelineId).nodes.some((node) => node.path === file.path)) return false;
+
+		if (timelineId !== this.timelineId) {
+			this.timelineId = timelineId;
+			this.render();
+			this.app.workspace.requestSaveLayout();
+		}
+		this.centreOn(file.path);
+		const el = this.nodeEls.get(file.path);
+		if (!el) return false;
+		el.addClass("is-pulse");
+		window.setTimeout(() => el.removeClass("is-pulse"), 1200);
+		return true;
 	}
 
 	private renderCanvas(definitions: TimelineDefinition[]) {
+		// Emptying the canvas drops focus on the body; remember whether to restore it.
+		const hadFocus = this.canvasEl.contains(document.activeElement) && document.activeElement !== this.canvasEl;
+		// A long press under way belongs to a box that is about to be replaced.
+		this.clearLongPress();
 		this.canvasEl.empty();
+		try {
+			this.renderCanvasContent(definitions);
+		} finally {
+			if (hadFocus) this.restoreFocus();
+		}
+	}
+
+	private restoreFocus() {
+		const el = this.focusedPath ? this.nodeEls.get(this.focusedPath) : undefined;
+		if (el) el.focus({ preventScroll: true });
+		else this.canvasEl.focus({ preventScroll: true });
+	}
+
+	private renderCanvasContent(definitions: TimelineDefinition[]) {
 		this.svg = null;
 		this.sceneEl = null;
+		this.lanesLayerEl = null;
+		this.axisLayerEl = null;
+		this.cornerEl = null;
+		this.pinnedEls = [];
 		this.layout = null;
 
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
@@ -254,6 +673,17 @@ export class TimelineView extends ItemView {
 			formatTick: (value) => this.momentLabel(value, graph.nodes),
 		});
 
+		// Lane ids from another timeline would dim everything with nothing checked.
+		const pruned = pruneFilter(
+			this.filter,
+			this.layout.lanes.filter((lane) => !lane.untimed).map((lane) => lane.id),
+		);
+		if (pruned !== this.filter) {
+			this.filter = pruned;
+			this.filterButtonEl?.toggleClass("is-active", isFiltering(this.filter, ""));
+			this.app.workspace.requestSaveLayout();
+		}
+
 		this.drawSvg(this.layout);
 	}
 
@@ -282,21 +712,41 @@ export class TimelineView extends ItemView {
 		defs.appendChild(marker);
 		svg.appendChild(defs);
 
-		// Lane labels and the axis stay pinned while the scene pans underneath.
+		// Lane labels and the axis stay pinned while the scene pans underneath:
+		// each strip follows the pan in one direction only.
 		const scene = svgEl("g", { class: "plc-timeline-scene" });
-		svg.appendChild(scene);
+		const axisLayer = svgEl("g", { class: "plc-pinned-axis" });
+		const lanesLayer = svgEl("g", { class: "plc-pinned-lanes" });
+		const corner = svgEl("rect", { class: "plc-pinned-corner", x: 0, y: 0 });
+		svg.append(scene, axisLayer, lanesLayer, corner);
 		this.sceneEl = scene;
+		this.axisLayerEl = axisLayer;
+		this.lanesLayerEl = lanesLayer;
+		this.cornerEl = corner;
 
-		this.drawLanes(scene, layout);
+		this.drawLanes(scene, lanesLayer, layout);
 		this.drawEdges(scene, layout);
 		this.drawNodes(scene, layout);
-		this.drawAxis(scene, layout);
+		this.drawAxis(scene, axisLayer, layout);
+		this.drawDivergenceMarker(scene, axisLayer, layout);
 
 		this.applyTransform();
+		this.applyHighlight();
 	}
 
-	private drawLanes(scene: SVGGElement, layout: Layout) {
+	private drawLanes(scene: SVGGElement, labels: SVGGElement, layout: Layout) {
 		const group = svgEl("g", { class: "plc-lanes" });
+
+		// The gutter is opaque so boxes panned to the left slide under the names.
+		labels.appendChild(
+			svgEl("rect", {
+				x: 0,
+				y: -STRIP_REACH,
+				width: LEFT_GUTTER,
+				height: STRIP_REACH * 2,
+				class: "plc-pinned-strip",
+			}),
+		);
 
 		for (const lane of layout.lanes) {
 			group.appendChild(
@@ -331,23 +781,36 @@ export class TimelineView extends ItemView {
 					event.stopPropagation();
 					this.editLane(lane);
 				});
+				// A press on a name is a rename, not the start of a pan.
+				label.addEventListener("pointerdown", (event) => event.stopPropagation());
 			}
 
-			group.appendChild(label);
+			labels.appendChild(label);
+			this.pinnedEls.push({ el: label, axis: "y", at: lane.y + lane.height / 2 });
 		}
 
 		scene.appendChild(group);
 	}
 
-	private drawAxis(scene: SVGGElement, layout: Layout) {
-		const group = svgEl("g", { class: "plc-axis" });
+	private drawAxis(scene: SVGGElement, strip: SVGGElement, layout: Layout) {
+		const grid = svgEl("g", { class: "plc-axis" });
 		this.tickEls.clear();
 
-		group.appendChild(
+		// The strip is opaque so boxes panned upwards slide under the dates.
+		strip.appendChild(
+			svgEl("rect", {
+				x: -STRIP_REACH,
+				y: 0,
+				width: STRIP_REACH * 2,
+				height: AXIS_HEIGHT,
+				class: "plc-pinned-strip",
+			}),
+		);
+		strip.appendChild(
 			svgEl("line", {
-				x1: LEFT_GUTTER,
+				x1: -STRIP_REACH,
 				y1: AXIS_HEIGHT,
-				x2: layout.width,
+				x2: STRIP_REACH,
 				y2: AXIS_HEIGHT,
 				class: "plc-axis-line",
 			}),
@@ -358,18 +821,16 @@ export class TimelineView extends ItemView {
 		let lastLabelX = Number.NEGATIVE_INFINITY;
 
 		for (const tick of layout.ticks) {
-			const tickEl = svgEl("g", { class: "plc-tick" });
+			const line = svgEl("line", {
+				x1: tick.x,
+				y1: AXIS_HEIGHT,
+				x2: tick.x,
+				y2: layout.height,
+				class: "plc-axis-grid",
+			});
+			grid.appendChild(line);
 
-			tickEl.appendChild(
-				svgEl("line", {
-					x1: tick.x,
-					y1: AXIS_HEIGHT,
-					x2: tick.x,
-					y2: layout.height,
-					class: "plc-axis-grid",
-				}),
-			);
-
+			const labelEl = svgEl("g", { class: "plc-tick" });
 			if (tick.x - lastLabelX >= MIN_LABEL_GAP) {
 				const label = svgEl("text", {
 					x: tick.x,
@@ -378,15 +839,34 @@ export class TimelineView extends ItemView {
 					"text-anchor": "middle",
 				});
 				label.textContent = tick.label;
-				tickEl.appendChild(label);
+				labelEl.appendChild(label);
+				this.pinnedEls.push({ el: label, axis: "x", at: tick.x });
 				lastLabelX = tick.x;
 			}
+			strip.appendChild(labelEl);
 
-			this.tickEls.set(tick.value, tickEl);
-			group.appendChild(tickEl);
+			this.tickEls.set(tick.value, { grid: line, label: labelEl });
 		}
 
-		scene.appendChild(group);
+		// Grid lines go under the lanes' boxes but over their bands.
+		scene.insertBefore(grid, scene.querySelector(".plc-edges"));
+	}
+
+	/** A dashed line at the moment this timeline split off, when it falls on the canvas. */
+	private drawDivergenceMarker(scene: SVGGElement, strip: SVGGElement, layout: Layout) {
+		if (this.divergenceTime === null) return;
+		const x = this.xForTime(layout, this.divergenceTime);
+		if (x < LEFT_GUTTER || x > layout.width) return;
+
+		// Under the boxes, like the grid, so it never covers or catches a note.
+		scene.insertBefore(
+			svgEl("line", { x1: x, y1: AXIS_HEIGHT, x2: x, y2: layout.height, class: "plc-divergence-line" }),
+			scene.querySelector(".plc-edges"),
+		);
+		const label = svgEl("text", { x: x + 4, y: 12, class: "plc-divergence-label" });
+		label.textContent = this.plugin.i18n.t("timeline.divergence");
+		strip.appendChild(label);
+		this.pinnedEls.push({ el: label, axis: "x", at: x + 4 });
 	}
 
 	/**
@@ -397,6 +877,7 @@ export class TimelineView extends ItemView {
 	private drawEdges(scene: SVGGElement, layout: Layout) {
 		const group = svgEl("g", { class: "plc-edges" });
 		const byPath = new Map(layout.placed.map((entry) => [entry.node.path, entry]));
+		this.edgeEls = [];
 
 		for (const edge of layout.edges) {
 			const from = byPath.get(edge.from);
@@ -409,13 +890,13 @@ export class TimelineView extends ItemView {
 			const y2 = to.y + to.height / 2;
 			const reach = Math.max(40, Math.abs(x2 - x1) * 0.45);
 
-			group.appendChild(
-				svgEl("path", {
-					d: `M ${x1} ${y1} C ${x1 + reach} ${y1}, ${x2 - reach} ${y2}, ${x2} ${y2}`,
-					class: "plc-edge",
-					"marker-end": "url(#plc-arrow)",
-				}),
-			);
+			const path = svgEl("path", {
+				d: `M ${x1} ${y1} C ${x1 + reach} ${y1}, ${x2 - reach} ${y2}, ${x2} ${y2}`,
+				class: "plc-edge",
+				"marker-end": "url(#plc-arrow)",
+			});
+			this.edgeEls.push({ from: edge.from, to: edge.to, el: path });
+			group.appendChild(path);
 		}
 
 		scene.appendChild(group);
@@ -441,6 +922,9 @@ export class TimelineView extends ItemView {
 		const group = svgEl("g", {
 			class: `plc-node is-${node.status}${node.uncertain ? " is-uncertain" : ""}`,
 			transform: `translate(${entry.x}, ${entry.y})`,
+			tabindex: 0,
+			role: "button",
+			"data-path": node.path,
 		});
 
 		group.appendChild(
@@ -454,7 +938,19 @@ export class TimelineView extends ItemView {
 		);
 
 		let textX = 12;
-		if (node.icon && node.iconType === "emoji") {
+		// A lucide name that does not exist draws nothing rather than failing.
+		const lucide = node.icon && node.iconType === "lucide" ? getIcon(node.icon) : null;
+		if (lucide) {
+			lucide.setAttribute("x", String(textX));
+			lucide.setAttribute("y", String((entry.height - 16) / 2));
+			lucide.setAttribute("width", "16");
+			lucide.setAttribute("height", "16");
+			// Obsidian's own icon class would resize it past the box.
+			lucide.removeClass("svg-icon");
+			lucide.addClass("plc-node-lucide");
+			group.appendChild(lucide);
+			textX += 20;
+		} else if (node.icon && node.iconType === "emoji") {
 			const iconEl = svgEl("text", {
 				x: textX,
 				y: entry.height / 2,
@@ -489,17 +985,15 @@ export class TimelineView extends ItemView {
 			);
 		}
 
-		const timeText = node.timeLabel || (node.time === null ? t("timeline.untimed") : String(node.time));
+		const timeText =
+			node.timeLabel || (node.time === null ? t("timeline.untimed") : this.formatNodeTime(node.time, node.precision));
+		const lines = [node.title, timeText, t(`status.${node.status}`), versioned ? t("timeline.hasVersions") : ""].filter(
+			(line) => line.length > 0,
+		);
 		const title = svgEl("title");
-		title.textContent = [
-			node.title,
-			timeText,
-			t(`status.${node.status}`),
-			versioned ? t("timeline.hasVersions") : "",
-		]
-			.filter((line) => line.length > 0)
-			.join("\n");
+		title.textContent = lines.join("\n");
 		group.appendChild(title);
+		group.setAttribute("aria-label", lines.join(", "));
 
 		group.addEventListener("click", (event) => {
 			// Releasing a pan or a reposition over a node should not open it.
@@ -512,6 +1006,17 @@ export class TimelineView extends ItemView {
 			group.addClass("is-draggable");
 			group.addEventListener("pointerdown", (event) => {
 				if (event.button !== 0) return;
+				if (event.pointerType === "touch") {
+					// A finger swiping across a crowded canvas nearly always starts
+					// on a box. It pans; only holding still first picks the note up.
+					this.clearLongPress();
+					this.longPressTimer = window.setTimeout(() => {
+						this.longPressTimer = null;
+						if (this.panned || this.drag) return;
+						this.beginDrag(entry, group, event);
+					}, LONG_PRESS_MS);
+					return;
+				}
 				// Claim the gesture so the canvas does not start panning instead.
 				event.stopPropagation();
 				this.beginDrag(entry, group, event);
@@ -543,7 +1048,7 @@ export class TimelineView extends ItemView {
 		).open();
 	}
 
-	private async openNode(file: TFile, event: MouseEvent) {
+	private async openNode(file: TFile, event: MouseEvent | KeyboardEvent) {
 		const newTab = event.ctrlKey || event.metaKey;
 		await this.app.workspace.getLeaf(newTab ? "tab" : false).openFile(file);
 	}
@@ -601,7 +1106,7 @@ export class TimelineView extends ItemView {
 			group,
 			companions: this.companionsOf(entry),
 			tick: tickEl
-				? { el: tickEl, label: tickEl.querySelector("text")?.textContent ?? "" }
+				? { el: tickEl, label: tickEl.label.querySelector("text")?.textContent ?? "" }
 				: null,
 			guide: null,
 			startX: event.clientX,
@@ -674,14 +1179,19 @@ export class TimelineView extends ItemView {
 
 		// With alt held only one event leaves the moment, so the moment stays put.
 		const follows = !drag.solo && !intoUntimed;
-		tick.el.setAttribute("transform", follows ? `translate(${deltaX}, 0)` : "translate(0, 0)");
+		const shift = follows ? `translate(${deltaX}, 0)` : "translate(0, 0)";
+		// The axis strip has its own scale, so the label travels in its units.
+		const stripShift = follows ? `translate(${deltaX * this.pinnedRatio()}, 0)` : "translate(0, 0)";
+		tick.el.label.setAttribute("transform", stripShift);
+		tick.el.grid.setAttribute("transform", shift);
+		tick.el.grid.toggleClass("is-moving", follows && deltaX !== 0);
 
-		const label = tick.el.querySelector("text");
+		const label = tick.el.label.querySelector("text");
 		if (!label) return;
 
 		label.textContent =
 			follows && drag.time !== null
-				? this.plugin.universe.formatTime(Number(drag.time.toFixed(4)))
+				? this.formatNodeTime(drag.time, drag.entry.node.precision)
 				: tick.label;
 	}
 
@@ -689,7 +1199,11 @@ export class TimelineView extends ItemView {
 		const atMoment = nodes.filter((node) => node.time === value);
 		const named = atMoment.find((node) => node.timeLabel.length > 0);
 		if (named) return named.timeLabel;
-		return this.plugin.universe.formatTime(Number(value.toFixed(4)));
+		return this.formatNodeTime(value, atMoment[0]?.precision ?? "year");
+	}
+
+	private formatNodeTime(value: number, precision: TimePrecision): string {
+		return this.plugin.universe.formatTime(value, precision, this.plugin.language);
 	}
 
 	private xForTime(layout: Layout, time: number): number {
@@ -723,7 +1237,8 @@ export class TimelineView extends ItemView {
 	private snapTime(raw: number, entry: PlacedNode, fine: boolean): number {
 		if (fine) return Number.parseFloat(raw.toFixed(6));
 		const step = this.snapStep(entry);
-		return Math.round(raw / step) * step;
+		// Trim float noise from the multiplication so stored values stay clean.
+		return Number.parseFloat((Math.round(raw / step) * step).toFixed(8));
 	}
 
 	private showDragHint(drag: NodeDrag, event: PointerEvent, intoUntimed: boolean) {
@@ -735,7 +1250,7 @@ export class TimelineView extends ItemView {
 		if (intoUntimed) {
 			parts.push(t("timeline.drag.blocked"));
 		} else if (drag.time !== null) {
-			parts.push(this.plugin.universe.formatTime(Number(drag.time.toFixed(4))));
+			parts.push(this.formatNodeTime(drag.time, drag.entry.node.precision));
 		}
 		if (drag.lane && !drag.lane.untimed && drag.lane.id !== drag.entry.node.flow) {
 			parts.push(`→ ${drag.lane.name}`);
@@ -778,7 +1293,10 @@ export class TimelineView extends ItemView {
 
 		const time = drag.time;
 		const flow = drag.lane && !drag.lane.untimed ? drag.lane.id : drag.entry.node.flow;
-		const timeChanged = time !== drag.entry.node.time;
+		const previous = drag.entry.node.time;
+		// A drop on the same snapped moment is not a move; comparing with a
+		// tolerance keeps float noise from wiping the author's time label.
+		const timeChanged = previous === null || Math.abs(time - previous) > TIME_EPSILON;
 		const flowChanged = flow !== drag.entry.node.flow;
 
 		if (!timeChanged && !flowChanged) {
@@ -816,6 +1334,11 @@ export class TimelineView extends ItemView {
 		});
 	}
 
+	private clearLongPress() {
+		if (this.longPressTimer !== null) window.clearTimeout(this.longPressTimer);
+		this.longPressTimer = null;
+	}
+
 	private cancelDrag() {
 		if (!this.drag) return;
 		this.drag.cancelled = true;
@@ -828,6 +1351,74 @@ export class TimelineView extends ItemView {
 		let startY = 0;
 		let originX = 0;
 		let originY = 0;
+
+		// Two fingers on the canvas: pinch to zoom, move both to pan.
+		const pointers = new Map<number, { x: number; y: number }>();
+		let pinch: { distance: number; zoom: number; midX: number; midY: number } | null = null;
+
+		const pinchFrame = () => {
+			const [a, b] = [...pointers.values()];
+			const rect = this.canvasEl.getBoundingClientRect();
+			return {
+				distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+				midX: (a.x + b.x) / 2 - rect.left,
+				midY: (a.y + b.y) / 2 - rect.top,
+			};
+		};
+
+		/** Starts (or restarts, after a third finger lifts) a pinch from the current pair. */
+		const baseline = () => {
+			const frame = pinchFrame();
+			pinch = { distance: frame.distance, zoom: this.zoom, midX: frame.midX, midY: frame.midY };
+		};
+
+		// Capture phase: the second finger must be seen before a node claims it
+		// as the start of a drag. Only fingers count — a mouse never pinches, and
+		// a mouse release outside the window must not leave a ghost finger behind.
+		this.registerDomEvent(
+			this.canvasEl,
+			"pointerdown",
+			(event) => {
+				if (event.pointerType !== "touch") return;
+				pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+				if (pointers.size < 2) return;
+				event.stopPropagation();
+				this.clearLongPress();
+				this.cancelDrag();
+				pressed = false;
+				this.panned = true;
+				if (pointers.size === 2) baseline();
+			},
+			{ capture: true },
+		);
+
+		const releasePointer = (event: PointerEvent) => {
+			if (!pointers.delete(event.pointerId) || !pinch) return;
+			if (pointers.size === 2) {
+				baseline();
+				return;
+			}
+			if (pointers.size < 2) {
+				pinch = null;
+				// The finger still down carries on panning from where it is, with no
+				// jump. `panned` stays set, so lifting it later is not a tap.
+				const rest = [...pointers.values()][0];
+				if (rest) {
+					pressed = true;
+					startX = rest.x;
+					startY = rest.y;
+					originX = rest.x - this.panX;
+					originY = rest.y - this.panY;
+				}
+			}
+		};
+		this.registerDomEvent(window, "pointercancel", (event) => {
+			this.clearLongPress();
+			releasePointer(event);
+			if (this.drag) this.cancelDrag();
+			pressed = false;
+			this.canvasEl.removeClass("is-panning");
+		});
 
 		this.registerDomEvent(this.canvasEl, "pointerdown", (event) => {
 			if (event.button !== 0) return;
@@ -843,6 +1434,18 @@ export class TimelineView extends ItemView {
 		// cleanly. Pointer capture would do this too, but it also retargets the
 		// click that follows, which would swallow every click on a node.
 		this.registerDomEvent(window, "pointermove", (event) => {
+			if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+			if (pinch && pointers.size === 2) {
+				const frame = pinchFrame();
+				// Pan by the midpoint's travel, then zoom about the new midpoint.
+				this.panX += frame.midX - pinch.midX;
+				this.panY += frame.midY - pinch.midY;
+				pinch.midX = frame.midX;
+				pinch.midY = frame.midY;
+				this.applyZoom(pinch.zoom * (frame.distance / pinch.distance), frame.midX, frame.midY);
+				this.applyTransform();
+				return;
+			}
 			if (this.drag) {
 				this.updateDrag(event);
 				return;
@@ -853,6 +1456,7 @@ export class TimelineView extends ItemView {
 				const travelled = Math.hypot(event.clientX - startX, event.clientY - startY);
 				if (travelled < DRAG_THRESHOLD) return;
 				this.panned = true;
+				this.clearLongPress(); // a finger that moves is panning, not picking up
 				this.canvasEl.addClass("is-panning");
 			}
 
@@ -861,8 +1465,15 @@ export class TimelineView extends ItemView {
 			this.applyTransform();
 		});
 
-		this.registerDomEvent(window, "pointerup", () => {
+		this.registerDomEvent(window, "pointerup", (event) => {
+			this.clearLongPress();
+			const wasPinching = pinch !== null;
+			releasePointer(event);
+			if (wasPinching) return;
 			if (this.drag) {
+				// A touch drag began as a pan press; that press is over too.
+				pressed = false;
+				this.canvasEl.removeClass("is-panning");
 				void this.finishDrag();
 				window.setTimeout(() => (this.panned = false), 0);
 				return;
@@ -886,6 +1497,100 @@ export class TimelineView extends ItemView {
 			const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
 			this.applyZoom(this.zoom * factor, pointerX, pointerY);
 		});
+	}
+
+	/**
+	 * Keys on the canvas: Tab reaches the notes, arrows walk between them,
+	 * Enter opens one, + − 0 zoom and fit, / jumps to the search box.
+	 */
+	private registerKeyboard() {
+		this.registerDomEvent(this.canvasEl, "focusin", (event) => {
+			const path = (event.target as Element | null)?.closest?.("[data-path]")?.getAttribute("data-path");
+			if (path) this.focusedPath = path;
+		});
+
+		this.registerDomEvent(this.canvasEl, "keydown", (event) => {
+			// Leave app shortcuts alone (Ctrl/Cmd +, −, 0 zoom Obsidian itself).
+			if ((event.ctrlKey || event.metaKey || event.altKey) && event.key !== "Enter") return;
+			const path = (event.target as Element | null)?.closest?.("[data-path]")?.getAttribute("data-path") ?? null;
+
+			const arrows: Record<string, "left" | "right" | "up" | "down"> = {
+				ArrowLeft: "left",
+				ArrowRight: "right",
+				ArrowUp: "up",
+				ArrowDown: "down",
+			};
+
+			if (path && arrows[event.key] && this.layout) {
+				event.preventDefault();
+				const next = neighbour(this.layout, path, arrows[event.key]);
+				if (next) this.focusNode(next);
+				return;
+			}
+			if (path && (event.key === "Enter" || event.key === " ")) {
+				event.preventDefault();
+				const entry = this.layout?.placed.find((placed) => placed.node.path === path);
+				if (entry) void this.openNode(entry.node.file, event);
+				return;
+			}
+			if (!path && arrows[event.key] && this.layout && this.layout.placed.length > 0) {
+				// From the empty canvas, the first arrow press lands on the first note.
+				event.preventDefault();
+				const first = [...this.layout.placed].sort((a, b) => a.y - b.y || a.x - b.x)[0];
+				this.focusNode(first.node.path);
+				return;
+			}
+
+			switch (event.key) {
+				case "+":
+				case "=":
+					event.preventDefault();
+					this.applyZoom(this.zoom * 1.25);
+					break;
+				case "-":
+				case "_":
+					event.preventDefault();
+					this.applyZoom(this.zoom / 1.25);
+					break;
+				case "0":
+					event.preventDefault();
+					this.fitToView();
+					break;
+				case "/":
+					event.preventDefault();
+					this.searchEl.focus();
+					this.searchEl.select();
+					break;
+			}
+		});
+	}
+
+	private focusNode(path: string) {
+		const el = this.nodeEls.get(path);
+		if (!el) return;
+		this.focusedPath = path;
+		el.focus({ preventScroll: true });
+		this.ensureVisible(path);
+	}
+
+	/** Pans just enough to bring a note out from under the edges and pinned strips. */
+	private ensureVisible(path: string) {
+		const entry = this.layout?.placed.find((placed) => placed.node.path === path);
+		if (!entry) return;
+		const rect = this.canvasEl.getBoundingClientRect();
+		const margin = 24;
+		const left = LEFT_GUTTER * this.stripScale() + margin;
+		const top = AXIS_HEIGHT * this.stripScale() + margin;
+		const x1 = this.panX + entry.x * this.zoom;
+		const y1 = this.panY + entry.y * this.zoom;
+		const x2 = x1 + entry.width * this.zoom;
+		const y2 = y1 + entry.height * this.zoom;
+
+		if (x1 < left) this.panX += left - x1;
+		else if (x2 > rect.width - margin) this.panX -= x2 - (rect.width - margin);
+		if (y1 < top) this.panY += top - y1;
+		else if (y2 > rect.height - margin) this.panY -= y2 - (rect.height - margin);
+		this.applyTransform();
 	}
 
 	/** Zooms about a point so the content under the cursor stays put. */
@@ -923,14 +1628,40 @@ export class TimelineView extends ItemView {
 		this.applyTransform();
 	}
 
+	/**
+	 * Scale of the pinned strips: they shrink with the scene when zooming out,
+	 * but never grow past their normal size, so zooming in does not let the
+	 * gutter and the date band eat the canvas.
+	 */
+	private stripScale(): number {
+		return Math.min(this.zoom, 1);
+	}
+
+	/** Scene units to strip units, for placing a pinned label level with the scene. */
+	private pinnedRatio(): number {
+		return this.zoom / this.stripScale();
+	}
+
 	private applyTransform() {
+		const strip = this.stripScale();
+		const ratio = this.pinnedRatio();
 		this.sceneEl?.setAttribute(
 			"transform",
 			`translate(${this.panX}, ${this.panY}) scale(${this.zoom})`,
 		);
+		this.axisLayerEl?.setAttribute("transform", `translate(${this.panX}, 0) scale(${strip})`);
+		this.lanesLayerEl?.setAttribute("transform", `translate(0, ${this.panY}) scale(${strip})`);
+		for (const pinned of this.pinnedEls) pinned.el.setAttribute(pinned.axis, String(pinned.at * ratio));
+		this.cornerEl?.setAttribute("width", String(LEFT_GUTTER * strip));
+		this.cornerEl?.setAttribute("height", String(AXIS_HEIGHT * strip));
+		// Obsidian debounces this itself, so calling it on every pan step is fine.
+		this.app.workspace.requestSaveLayout();
 	}
 
 	async onClose() {
+		this.clearLongPress();
+		if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
+		this.redrawTimer = null;
 		this.contentEl.empty();
 	}
 }

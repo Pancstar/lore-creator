@@ -1,6 +1,7 @@
 import { App, TFile, normalizePath } from "obsidian";
 import { linkTarget } from "../links";
 import { asString } from "../frontmatter";
+import { loreFiles } from "../scope";
 
 export interface VersionInfo {
 	number: number;
@@ -29,10 +30,18 @@ function parseNumber(value: unknown): number {
  * switching versions never leaves a dangling `[[link]]` behind.
  */
 export class VersionStore {
+	/** Active note path → its archives. Built on demand, dropped on any change. */
+	private index: Map<string, TFile[]> | null = null;
+
 	constructor(
 		private app: App,
 		private versionsFolder: string,
 	) {}
+
+	/** Forgets the archive index; the next lookup rebuilds it in one vault pass. */
+	invalidate() {
+		this.index = null;
+	}
 
 	setFolder(folder: string) {
 		this.versionsFolder = folder;
@@ -68,16 +77,25 @@ export class VersionStore {
 	 * list off the active note, so the two can never drift apart.
 	 */
 	archivesOf(active: TFile): TFile[] {
-		const archives: TFile[] = [];
+		return [...(this.buildIndex().get(active.path) ?? [])];
+	}
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
+	private buildIndex(): Map<string, TFile[]> {
+		if (this.index) return this.index;
+
+		const index = new Map<string, TFile[]>();
+		for (const file of loreFiles(this.app)) {
 			const target = linkTarget(this.frontmatter(file)["version-of"]);
 			if (!target) continue;
-			if (this.app.metadataCache.getFirstLinkpathDest(target, file.path)?.path === active.path) {
-				archives.push(file);
-			}
+			const activePath = this.app.metadataCache.getFirstLinkpathDest(target, file.path)?.path;
+			if (!activePath) continue;
+
+			const archives = index.get(activePath);
+			if (archives) archives.push(file);
+			else index.set(activePath, [file]);
 		}
-		return archives;
+		this.index = index;
+		return index;
 	}
 
 	list(file: TFile): VersionEntry[] {

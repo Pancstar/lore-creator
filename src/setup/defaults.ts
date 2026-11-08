@@ -1,5 +1,6 @@
 import type { FieldDefinition, TypeDefinition } from "../types";
 import type { I18n } from "../i18n";
+import { DEFAULT_TIME, Time } from "../universe";
 
 type Lang = "tr" | "en";
 
@@ -357,19 +358,19 @@ export function buildTemplate(type: TypeDefinition, lang: Lang): string {
 	return lines.join("\n");
 }
 
-export function buildUniverseNote(name: string, i18n: I18n): string {
+export function buildUniverseNote(name: string, i18n: I18n, time: Time = DEFAULT_TIME): string {
 	return [
 		"---",
 		"type: system",
 		'icon: "🌌"',
 		`universe-name: ${yamlValue(name)}`,
-		'time-name: ""',
-		'time-unit: ""',
-		"time-epoch: 0",
-		"time-days: 365",
-		"time-async: false",
-		"time-earth-epoch:",
-		"time-earth-ratio: 1",
+		`time-name: ${JSON.stringify(time.timeName)}`,
+		`time-unit: ${JSON.stringify(time.timeUnit)}`,
+		`time-epoch: ${time.timeEpoch}`,
+		`time-days: ${time.timeDays}`,
+		`time-async: ${time.async}`,
+		time.earthEpoch === null ? "time-earth-epoch:" : `time-earth-epoch: ${time.earthEpoch}`,
+		`time-earth-ratio: ${time.earthRatio}`,
 		"---",
 		"",
 		`# ${name}`,

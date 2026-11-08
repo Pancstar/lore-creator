@@ -1,14 +1,17 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, Modal, Notice, Setting } from "obsidian";
 import type { I18n } from "../i18n";
 import type { Universe } from "../universe";
 import {
 	EMPTY_PARTS,
 	TimeParts,
 	TimePrecision,
+	daysPerYear,
 	formatLabel,
+	formatTime,
 	partsToTime,
 	timeToParts,
 } from "../time";
+import { enterSubmits } from "./enterSubmits";
 
 export interface TimeValue {
 	time: number | null;
@@ -43,6 +46,8 @@ export class TimePickerModal extends Modal {
 		private language: "tr" | "en",
 		current: TimeValue,
 		private onSubmit: (value: TimeValue) => void,
+		/** Lets the author fix the calendar itself from where they meet it. */
+		private onEditSystem?: () => void,
 	) {
 		super(app);
 		const time = this.universe.readTime();
@@ -58,6 +63,7 @@ export class TimePickerModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.i18n.t("time.title"));
 		this.contentEl.addClass("plc-time-picker");
 
@@ -147,6 +153,15 @@ export class TimePickerModal extends Modal {
 
 		this.previewEl = this.bodyEl.createEl("p", { cls: "plc-preview" });
 		this.refreshPreview();
+
+		const onEditSystem = this.onEditSystem;
+		if (onEditSystem) {
+			const link = this.bodyEl.createEl("button", { cls: "plc-link-button", text: this.i18n.t("time.editSystem") });
+			link.addEventListener("click", () => {
+				this.close();
+				onEditSystem();
+			});
+		}
 	}
 
 	private addPartsRow(name: string, parts: TimeParts) {
@@ -168,43 +183,41 @@ export class TimePickerModal extends Modal {
 		);
 
 		if (this.precision !== "year") {
-			setting.addText((text) =>
-				text
-					.setPlaceholder(this.i18n.t("time.day"))
-					.setValue(String(parts.day))
-					.onChange((value) => {
-						const parsed = Number.parseInt(value, 10);
-						if (!Number.isFinite(parsed)) return;
-						parts.day = parsed;
-						this.syncLabel();
-					}),
-			);
+			this.addClampedField(setting, parts, "day", this.i18n.t("time.day"), 1, daysPerYear(timeSystem));
 		}
 
 		if (this.precision === "datetime") {
-			setting.addText((text) =>
-				text
-					.setPlaceholder(this.i18n.t("time.hour"))
-					.setValue(String(parts.hour))
-					.onChange((value) => {
-						const parsed = Number.parseInt(value, 10);
-						if (!Number.isFinite(parsed)) return;
-						parts.hour = Math.min(23, Math.max(0, parsed));
-						this.syncLabel();
-					}),
-			);
-			setting.addText((text) =>
-				text
-					.setPlaceholder(this.i18n.t("time.minute"))
-					.setValue(String(parts.minute))
-					.onChange((value) => {
-						const parsed = Number.parseInt(value, 10);
-						if (!Number.isFinite(parsed)) return;
-						parts.minute = Math.min(59, Math.max(0, parsed));
-						this.syncLabel();
-					}),
-			);
+			this.addClampedField(setting, parts, "hour", this.i18n.t("time.hour"), 0, 23);
+			this.addClampedField(setting, parts, "minute", this.i18n.t("time.minute"), 0, 59);
 		}
+	}
+
+	/**
+	 * An integer field kept inside `[min, max]`. The state is clamped on every
+	 * keystroke; the box itself is corrected on blur so typing is not fought.
+	 */
+	private addClampedField(
+		setting: Setting,
+		parts: TimeParts,
+		key: "day" | "hour" | "minute",
+		placeholder: string,
+		min: number,
+		max: number,
+	) {
+		setting.addText((text) => {
+			text
+				.setPlaceholder(placeholder)
+				.setValue(String(parts[key]))
+				.onChange((value) => {
+					const parsed = Number.parseInt(value, 10);
+					if (!Number.isFinite(parsed)) return;
+					parts[key] = Math.min(max, Math.max(min, parsed));
+					this.syncLabel();
+				});
+			text.inputEl.addEventListener("blur", () => {
+				text.setValue(String(parts[key]));
+			});
+		});
 	}
 
 	private syncLabel() {
@@ -223,14 +236,23 @@ export class TimePickerModal extends Modal {
 		const time = partsToTime(this.start, timeSystem, this.precision);
 		const earth = this.universe.toEarthTime(time, timeSystem);
 		const earthPart = earth === null ? "" : ` · ${this.i18n.t("time.earth")} ${earth}`;
-		this.previewEl.setText(`time: ${time}${earthPart}`);
+		const readable = formatTime(time, timeSystem, this.precision, this.language);
+		this.previewEl.setText(`${readable} (${time})${earthPart}`);
 	}
 
 	private submit() {
 		const timeSystem = this.universe.readTime();
+		const start = partsToTime(this.start, timeSystem, this.precision);
+		const end = this.end ? partsToTime(this.end, timeSystem, this.precision) : null;
+
+		if (end !== null && end < start) {
+			new Notice(this.i18n.t("time.error.endBeforeStart"));
+			return;
+		}
+
 		this.onSubmit({
-			time: partsToTime(this.start, timeSystem, this.precision),
-			timeEnd: this.end ? partsToTime(this.end, timeSystem, this.precision) : null,
+			time: start,
+			timeEnd: end,
 			precision: this.precision,
 			label: this.label,
 			uncertain: this.uncertain,

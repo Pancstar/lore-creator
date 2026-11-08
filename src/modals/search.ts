@@ -1,7 +1,11 @@
 import { App, Modal, Setting, TFile } from "obsidian";
 import type LorePlugin from "../main";
+import type { Time } from "../universe";
 import { TimelineModel } from "../timeline/model";
 import { asNumberOrNull, asString } from "../frontmatter";
+import { TimePrecision, daysPerYear, isTimePrecision, parseUniverseDate } from "../time";
+import { loreFiles } from "../scope";
+import { addExampleBadge } from "../guide/badge";
 
 const ANY = "__any";
 
@@ -15,6 +19,7 @@ interface Row {
 	flow: string;
 	time: number | null;
 	timeLabel: string;
+	precision: TimePrecision;
 }
 
 /**
@@ -156,7 +161,7 @@ export class SearchModal extends Modal {
 	private collect(): Row[] {
 		const rows: Row[] = [];
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of loreFiles(this.app)) {
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!frontmatter || frontmatter["version-of"]) continue;
 
@@ -173,6 +178,7 @@ export class SearchModal extends Modal {
 				flow: asString(frontmatter.flow).trim(),
 				time: asNumberOrNull(frontmatter.time),
 				timeLabel: asString(frontmatter["time-label"]),
+				precision: isTimePrecision(frontmatter["time-precision"]) ? frontmatter["time-precision"] : "year",
 			});
 		}
 		return rows;
@@ -186,13 +192,14 @@ export class SearchModal extends Modal {
 		if (this.timelineFilter !== ANY && row.timeline !== this.timelineFilter) return false;
 		if (this.flowFilter !== ANY && row.flow !== this.flowFilter) return false;
 
-		const from = Number.parseFloat(this.fromTime);
-		const to = Number.parseFloat(this.toTime);
+		const timeSystem = this.plugin.universe.readTime();
+		const from = parseUniverseDate(this.fromTime, timeSystem);
+		const to = this.upperBound(timeSystem);
 
 		// A time bound only makes sense for notes that carry a time; untimed notes
 		// drop out rather than being treated as year zero.
-		if (Number.isFinite(from) && (row.time === null || row.time < from)) return false;
-		if (Number.isFinite(to) && (row.time === null || row.time > to)) return false;
+		if (from !== null && (row.time === null || row.time < from)) return false;
+		if (to !== null && (row.time === null || row.time >= to)) return false;
 
 		return true;
 	}
@@ -219,6 +226,7 @@ export class SearchModal extends Modal {
 
 			if (row.icon) headEl.createSpan({ cls: "plc-list-icon", text: row.icon });
 			headEl.createSpan({ cls: "plc-list-title", text: row.title });
+			addExampleBadge(headEl, this.app, row.file, this.plugin.i18n.t("guide.badge.example"));
 
 			const type = this.plugin.types.byId(row.type);
 			if (type) {
@@ -232,7 +240,10 @@ export class SearchModal extends Modal {
 				text: t(`status.${row.status}`),
 			});
 
-			const context = [row.timeline, row.flow, row.timeLabel].filter((part) => part.length > 0);
+			const when =
+				row.timeLabel ||
+				(row.time === null ? "" : this.plugin.universe.formatTime(row.time, row.precision, this.plugin.language));
+			const context = [row.timeline, row.flow, when].filter((part) => part.length > 0);
 			if (context.length > 0) {
 				rowEl.createDiv({ cls: "plc-list-meta", text: context.join(" · ") });
 			}
@@ -249,6 +260,18 @@ export class SearchModal extends Modal {
 				text: t("search.more", String(rows.length - 200)),
 			});
 		}
+	}
+
+	/**
+	 * Exclusive upper bound. "To 7" means through the end of year 7 and
+	 * "to 7/120" through the end of day 120, so the bound is the start of the
+	 * next year or day. A decimal year is taken as an exact point.
+	 */
+	private upperBound(timeSystem: Time): number | null {
+		const start = parseUniverseDate(this.toTime, timeSystem);
+		if (start === null) return null;
+		if (this.toTime.includes("/")) return start + 1 / daysPerYear(timeSystem);
+		return Number.isInteger(start) ? start + 1 : start + 1e-9;
 	}
 
 	onClose() {

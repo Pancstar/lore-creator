@@ -1,9 +1,17 @@
 import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
-import { Audit, Issue, IssueKind } from "../audit";
+import { Audit, ISSUE_KINDS, Issue, IssueKind } from "../audit";
 import { asString } from "../frontmatter";
+import { asStatus } from "../timeline/model";
+import { loreFiles } from "../scope";
+import { addExampleBadge } from "../guide/badge";
 
 export const VIEW_TYPE_DASHBOARD = "plc-dashboard";
+
+interface LoreNote {
+	file: TFile;
+	frontmatter: Record<string, unknown>;
+}
 
 interface Unfinished {
 	file: TFile;
@@ -27,7 +35,7 @@ export class DashboardView extends ItemView {
 		private plugin: LorePlugin,
 	) {
 		super(leaf);
-		this.audit = new Audit(this.app);
+		this.audit = new Audit(this.app, this.plugin.types);
 	}
 
 	getViewType(): string {
@@ -48,16 +56,20 @@ export class DashboardView extends ItemView {
 	}
 
 	render() {
+		// Redraws follow autosave, so keep the reader where they were.
+		const scrollTop = this.contentEl.scrollTop;
 		this.contentEl.empty();
-		this.renderSummary();
-		this.renderUnfinished();
+		const notes = this.loreNotes();
+		this.renderSummary(notes);
+		this.renderUnfinished(notes);
 		this.renderAudit();
+		this.contentEl.scrollTop = scrollTop;
 	}
 
-	private loreNotes(): { file: TFile; frontmatter: Record<string, unknown> }[] {
-		const notes: { file: TFile; frontmatter: Record<string, unknown> }[] = [];
+	private loreNotes(): LoreNote[] {
+		const notes: LoreNote[] = [];
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of loreFiles(this.app)) {
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!frontmatter) continue;
 			if (frontmatter["version-of"]) continue;
@@ -70,9 +82,8 @@ export class DashboardView extends ItemView {
 		return notes;
 	}
 
-	private renderSummary() {
+	private renderSummary(notes: LoreNote[]) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		const notes = this.loreNotes();
 
 		if (notes.length === 0) {
 			const wrapper = this.contentEl.createDiv({ cls: "plc-list-empty" });
@@ -101,17 +112,18 @@ export class DashboardView extends ItemView {
 		}
 	}
 
-	private renderUnfinished() {
+	private renderUnfinished(notes: LoreNote[]) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 
-		const unfinished: Unfinished[] = this.loreNotes()
-			.filter((note) => note.frontmatter.status === "partial" || note.frontmatter.status === "draft")
+		// A note with no status is a draft, here as in the banner and the timeline.
+		const unfinished: Unfinished[] = notes
+			.filter((note) => asStatus(note.frontmatter.status) !== "done")
 			.map((note) => ({
 				file: note.file,
 				title: note.file.basename,
 				icon: asString(note.frontmatter.icon),
 				type: asString(note.frontmatter.type),
-				status: note.frontmatter.status === "partial" ? "partial" : "draft",
+				status: asStatus(note.frontmatter.status) === "partial" ? "partial" : "draft",
 			}));
 
 		if (unfinished.length === 0) return;
@@ -134,6 +146,7 @@ export class DashboardView extends ItemView {
 
 			if (entry.icon) headEl.createSpan({ cls: "plc-list-icon", text: entry.icon });
 			headEl.createSpan({ cls: "plc-list-title", text: entry.title });
+			addExampleBadge(headEl, this.app, entry.file, this.plugin.i18n.t("guide.badge.example"));
 			headEl.createSpan({
 				cls: `plc-badge plc-badge-status is-${entry.status}`,
 				text: t(`status.${entry.status}`),
@@ -147,21 +160,32 @@ export class DashboardView extends ItemView {
 
 	private renderAudit() {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		const issues = this.audit.run();
+		// The audit is a full vault pass; while collapsed nobody reads it, so it
+		// is skipped and the heading goes without a count.
+		const hidden = new Set(ISSUE_KINDS.filter((kind) => this.plugin.settings.auditHidden.includes(kind)));
+		// Kinds the author switched off leave the count too, so the heading says
+		// how much is left to look at, not how much was found.
+		const issues = this.auditOpen ? this.audit.run().filter((issue) => !hidden.has(issue.kind)) : null;
 
 		const headingEl = this.contentEl.createEl("h4", { cls: "plc-list-heading plc-collapsible" });
 		const caretEl = headingEl.createSpan({ cls: "plc-caret" });
 		setIcon(caretEl, this.auditOpen ? "chevron-down" : "chevron-right");
-		headingEl.createSpan({ text: t("dashboard.audit", String(issues.length)) });
+		headingEl.createSpan({
+			text: issues ? t("dashboard.audit", String(issues.length)) : t("dashboard.audit.closed"),
+		});
+		if (issues && hidden.size > 0) {
+			headingEl.createSpan({ cls: "plc-list-meta", text: t("dashboard.audit.hidden", String(hidden.size)) });
+		}
 
 		headingEl.addEventListener("click", () => {
 			this.auditOpen = !this.auditOpen;
 			this.render();
 		});
 
-		if (!this.auditOpen) return;
+		if (!issues) return;
 
 		this.contentEl.createEl("p", { cls: "plc-list-meta", text: t("dashboard.audit.desc") });
+		this.renderAuditChips(hidden);
 
 		if (issues.length === 0) {
 			this.contentEl.createEl("p", { cls: "plc-list-meta", text: t("dashboard.audit.clean") });
@@ -178,7 +202,9 @@ export class DashboardView extends ItemView {
 			}
 		}
 
-		for (const [kind, group] of grouped) {
+		for (const kind of ISSUE_KINDS) {
+			const group = grouped.get(kind);
+			if (!group) continue;
 			this.contentEl.createDiv({
 				cls: "plc-list-meta plc-audit-kind",
 				text: t(`audit.${kind}`),
@@ -189,6 +215,7 @@ export class DashboardView extends ItemView {
 				const rowEl = listEl.createDiv({ cls: "plc-list-row plc-audit-row" });
 				const headEl = rowEl.createDiv({ cls: "plc-list-head" });
 				headEl.createSpan({ cls: "plc-list-title", text: issue.file.basename });
+				addExampleBadge(headEl, this.app, issue.file, this.plugin.i18n.t("guide.badge.example"));
 				if (issue.detail) {
 					headEl.createSpan({ cls: "plc-list-meta", text: issue.detail });
 				}
@@ -197,5 +224,29 @@ export class DashboardView extends ItemView {
 				});
 			}
 		}
+	}
+
+	/** One toggle per kind; a switched-off kind stays visible so it can come back. */
+	private renderAuditChips(hidden: Set<string>) {
+		const chipsEl = this.contentEl.createDiv({ cls: "plc-audit-chips" });
+		for (const kind of ISSUE_KINDS) {
+			const chip = chipsEl.createEl("button", {
+				cls: `plc-chip${hidden.has(kind) ? " is-off" : ""}`,
+				text: this.plugin.i18n.t(`audit.chip.${kind}`),
+				attr: { title: this.plugin.i18n.t(`audit.${kind}`), "aria-pressed": String(!hidden.has(kind)) },
+			});
+			chip.addEventListener("click", () => void this.toggleAuditKind(kind));
+		}
+	}
+
+	private async toggleAuditKind(kind: IssueKind) {
+		const current = this.plugin.settings.auditHidden;
+		this.plugin.settings.auditHidden = current.includes(kind)
+			? current.filter((entry) => entry !== kind)
+			: [...current, kind];
+		// Only this list changes, so only this view redraws: `saveSettings`
+		// would drop every cache and repaint every view for a filter click.
+		await this.plugin.saveData(this.plugin.settings);
+		this.render();
 	}
 }

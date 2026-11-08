@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile, WorkspaceLeaf, getLanguage, normalizePath } from "obsidian";
+import { Notice, Plugin, TAbstractFile, TFile, WorkspaceLeaf, debounce, getLanguage, normalizePath } from "obsidian";
 import { SetupModal } from "./setup/wizard";
 import { DEFAULT_SETTINGS, LoreSettingTab, LoreSettings } from "./settings";
 import { I18n } from "./i18n";
@@ -16,13 +16,19 @@ import { VersionSetsModal } from "./modals/versionSets";
 import {
 	DashboardView,
 	DraftsView,
+	GuideView,
 	LawsView,
 	TimelineView,
 	VIEW_DEFINITIONS,
+	VIEW_TYPE_GUIDE,
 	VIEW_TYPE_TIMELINE,
 } from "./views";
+import type { ChapterId } from "./guide/chapters";
 import { SearchModal } from "./modals/search";
 import { ExportModal } from "./modals/export";
+import { TimelineModel } from "./timeline/model";
+import { openTimeSystemEditor } from "./modals/timeSystem";
+import { setTemplatesFolder } from "./scope";
 
 export default class LorePlugin extends Plugin {
 	settings: LoreSettings = { ...DEFAULT_SETTINGS };
@@ -34,6 +40,12 @@ export default class LorePlugin extends Plugin {
 	versions!: VersionStore;
 	versionSets!: VersionSetStore;
 
+	/**
+	 * Autosave fires metadata events on nearly every keystroke. Caches are
+	 * dropped at once, but the redraw waits for the burst to settle.
+	 */
+	private scheduleRefresh = debounce(() => this.refreshAll(), 150, true);
+
 	get language(): "tr" | "en" {
 		return this.i18n.current;
 	}
@@ -44,6 +56,7 @@ export default class LorePlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		setTemplatesFolder(this.settings.templatesFolder);
 
 		this.universe = new Universe(this.app, this.settings.universeFile);
 		this.types = new TypeRegistry(this.app, this.registryPath);
@@ -93,6 +106,12 @@ export default class LorePlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "edit-time-system",
+			name: this.i18n.t("command.timeSystem"),
+			callback: () => openTimeSystemEditor(this),
+		});
+
+		this.addCommand({
 			id: "setup-vault",
 			name: this.i18n.t("command.setup"),
 			callback: () => new SetupModal(this.app, this).open(),
@@ -124,6 +143,20 @@ export default class LorePlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "show-in-timeline",
+			name: this.i18n.t("command.showInTimeline"),
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file) return false;
+				const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+				if (typeof frontmatter?.timeline !== "string" || !frontmatter.timeline.trim()) return false;
+				if (frontmatter["version-of"]) return false;
+				if (!checking) void this.showInTimeline(file);
+				return true;
+			},
+		});
+
+		this.addCommand({
 			id: "go-next",
 			name: this.i18n.t("command.goNext"),
 			checkCallback: (checking) => this.navigateCommand(checking, "next"),
@@ -145,16 +178,30 @@ export default class LorePlugin extends Plugin {
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => this.onMetadataChanged(file)),
 		);
+		// Deleted and renamed notes must leave the views even when no other note's
+		// metadata changes alongside them.
+		this.registerEvent(this.app.vault.on("delete", (file) => this.onVaultStructureChanged(file)));
+		this.registerEvent(this.app.vault.on("rename", (file) => this.onVaultStructureChanged(file)));
 
 		// Views exist before this plugin finishes loading, so draw into them once
 		// the workspace is settled rather than waiting for the next file to open.
 		this.app.workspace.onLayoutReady(() => {
 			this.decorateNotes();
+			// First run (including a first run after updating): the guide opens
+			// once and its "Set up your universe" chapter replaces the notice,
+			// so a newcomer never meets two prompts at once.
+			if (!this.settings.guideShown) {
+				this.settings.guideShown = true;
+				void this.saveData(this.settings);
+				void this.openGuide("intro");
+				return;
+			}
 			this.offerSetup();
 		});
 	}
 
 	onunload() {
+		this.scheduleRefresh.cancel();
 		this.banner?.removeAll();
 		this.navigator?.removeAll();
 	}
@@ -212,19 +259,30 @@ export default class LorePlugin extends Plugin {
 	}
 
 	private onMetadataChanged(file: TFile) {
+		if (this.types.isRegistryFile(file)) this.types.invalidate();
+
 		// Any frontmatter edit can move a note on the timeline or change which
 		// laws and drafts it relates to, so the lists are rebuilt regardless of
-		// which note changed.
+		// which note changed. Editing one note can also change what its
+		// neighbours point at, so every open note is redecorated too.
+		this.invalidateIndexes();
+		this.scheduleRefresh();
+	}
+
+	private onVaultStructureChanged(file: TAbstractFile) {
+		if (file instanceof TFile && this.types.isRegistryFile(file)) this.types.invalidate();
+		this.invalidateIndexes();
+		this.scheduleRefresh();
+	}
+
+	/** Drops every vault-wide cache; the next read rebuilds each in one pass. */
+	private invalidateIndexes() {
+		TimelineModel.invalidate();
+		this.versions.invalidate();
+	}
+
+	private refreshAll() {
 		this.refreshViews();
-
-		if (this.types.isRegistryFile(file)) {
-			this.types.invalidate();
-			this.decorateNotes();
-			return;
-		}
-
-		// Editing one note can change what its neighbours point at, so every open
-		// view is refreshed rather than only the one showing this file.
 		this.decorateNotes();
 	}
 
@@ -239,6 +297,8 @@ export default class LorePlugin extends Plugin {
 		this.types.setPath(this.registryPath);
 		this.versions.setFolder(this.settings.versionsFolder);
 		this.versionSets.setPath(this.settings.versionSetsFile);
+		setTemplatesFolder(this.settings.templatesFolder);
+		this.invalidateIndexes();
 		this.applyLanguage();
 		this.refreshViews();
 		this.decorateNotes();
@@ -254,7 +314,9 @@ export default class LorePlugin extends Plugin {
 		for (const definition of VIEW_DEFINITIONS) {
 			for (const leaf of this.app.workspace.getLeavesOfType(definition.type)) {
 				const view = leaf.view;
-				if (
+				if (view instanceof GuideView) {
+					view.refresh();
+				} else if (
 					view instanceof LawsView ||
 					view instanceof DraftsView ||
 					view instanceof DashboardView
@@ -273,7 +335,24 @@ export default class LorePlugin extends Plugin {
 		}
 	}
 
+	/** Opens the guide tab, on a given chapter when asked. */
+	async openGuide(chapter?: ChapterId) {
+		await this.activateView(VIEW_TYPE_GUIDE);
+		const view = this.app.workspace.getLeavesOfType(VIEW_TYPE_GUIDE)[0]?.view;
+		if (chapter && view instanceof GuideView) view.openChapter(chapter);
+	}
+
 	/** Reveals an existing leaf, opening it where that kind of view belongs. */
+	/** Opens the timeline and brings a note into view once the canvas has a size. */
+	async showInTimeline(file: TFile) {
+		await this.activateView(VIEW_TYPE_TIMELINE);
+		const view = this.app.workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)[0]?.view;
+		if (!(view instanceof TimelineView)) return;
+		window.requestAnimationFrame(() => {
+			if (!view.showNote(file)) new Notice(this.i18n.t("timeline.notOnTimeline"));
+		});
+	}
+
 	async activateView(viewType: string) {
 		const { workspace } = this.app;
 

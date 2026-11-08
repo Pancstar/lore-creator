@@ -24,7 +24,18 @@ export const EMPTY_PARTS: TimeParts = { year: 0, day: 1, hour: 0, minute: 0 };
 
 const MINUTES_PER_DAY = 24 * 60;
 
-function daysPerYear(time: Time): number {
+/** Only `timeDays` matters to the day maths; the rest just fills the shape. */
+const DEFAULT_TIME_SHAPE: Time = {
+	timeName: "",
+	timeUnit: "",
+	timeEpoch: 0,
+	timeDays: 365,
+	async: false,
+	earthEpoch: null,
+	earthRatio: 1,
+};
+
+export function daysPerYear(time: Time): number {
 	return time.timeDays > 0 ? time.timeDays : 365;
 }
 
@@ -47,13 +58,20 @@ export function partsToTime(parts: TimeParts, time: Time, precision: TimePrecisi
 
 /** Inverse of `partsToTime`, for populating the editor with an existing value. */
 export function timeToParts(value: number, time: Time, precision: TimePrecision): TimeParts {
-	const year = Math.floor(value);
-	if (precision === "year") return { year, day: 1, hour: 0, minute: 0 };
+	// Year precision keeps the whole value: a fractional time (e.g. written by a
+	// timeline drag) must survive a round trip through the editor untouched.
+	if (precision === "year") return { year: value, day: 1, hour: 0, minute: 0 };
 
+	let year = Math.floor(value);
 	const days = daysPerYear(time);
 	const remainder = value - year;
 
-	const totalMinutes = Math.round(remainder * days * MINUTES_PER_DAY);
+	let totalMinutes = Math.round(remainder * days * MINUTES_PER_DAY);
+	// Rounding a value just below the next year must not yield day `days + 1`.
+	if (totalMinutes >= days * MINUTES_PER_DAY) {
+		year += 1;
+		totalMinutes = 0;
+	}
 	const dayIndex = Math.floor(totalMinutes / MINUTES_PER_DAY);
 	const withinDay = totalMinutes - dayIndex * MINUTES_PER_DAY;
 
@@ -82,7 +100,7 @@ export function formatLabel(
 	const name = time.timeName.trim();
 	const unit = time.timeUnit.trim();
 
-	const head = [name, unit, String(parts.year)].filter((piece) => piece.length > 0).join(" ");
+	const head = [name, unit, String(Math.floor(parts.year))].filter((piece) => piece.length > 0).join(" ");
 	if (precision === "year") return head;
 
 	const dayWord = language === "tr" ? "gün" : "day";
@@ -90,4 +108,69 @@ export function formatLabel(
 	if (precision === "date") return `${head}, ${dayPart}`;
 
 	return `${head}, ${dayPart} ${pad(parts.hour)}:${pad(parts.minute)}`;
+}
+
+/** A `time` value in the universe's own words, at the note's precision. */
+export function formatTime(
+	value: number,
+	time: Time,
+	precision: TimePrecision,
+	language: "tr" | "en",
+): string {
+	return formatLabel(timeToParts(value, time, precision), time, precision, language);
+}
+
+/**
+ * Re-encodes a stored value for a new day count so its year, day and clock
+ * stay the same. Days past the new count land on the new last day. Year
+ * precision has no day to keep: its fraction means the same under any count.
+ */
+export function rescaleTime(
+	value: number,
+	oldDays: number,
+	newDays: number,
+	precision: TimePrecision,
+): number {
+	if (precision === "year") return value;
+
+	const parts = timeToParts(value, { ...DEFAULT_TIME_SHAPE, timeDays: oldDays }, precision);
+	const days = newDays > 0 ? newDays : 365;
+	parts.day = Math.min(days, Math.max(1, parts.day));
+	return partsToTime(parts, { ...DEFAULT_TIME_SHAPE, timeDays: days }, precision);
+}
+
+/**
+ * Reads a date typed in the universe's terms: `year` or `year/day`. Returns
+ * null for empty or unreadable input, so callers can treat it as "no bound".
+ */
+export function parseUniverseDate(text: string, time: Time): number | null {
+	const trimmed = text.trim();
+	if (!trimmed) return null;
+
+	const [yearText, dayText, ...rest] = trimmed.split("/").map((piece) => piece.trim());
+	if (rest.length > 0 || !yearText) return null;
+
+	const year = Number(yearText);
+	if (!Number.isFinite(year)) return null;
+	if (dayText === undefined) return year;
+
+	const day = Number(dayText);
+	if (!Number.isInteger(day) || !Number.isInteger(year)) return null;
+
+	const clamped = Math.min(daysPerYear(time), Math.max(1, day));
+	return partsToTime({ year, day: clamped, hour: 0, minute: 0 }, time, "date");
+}
+
+export type TimeIssue = "days" | "ratio" | "epoch" | "earthEpoch";
+
+/** Everything that would make the time system unusable, for the editor and wizard. */
+export function validateTime(time: Time): TimeIssue[] {
+	const issues: TimeIssue[] = [];
+	if (!Number.isInteger(time.timeDays) || time.timeDays < 1) issues.push("days");
+	if (!Number.isFinite(time.timeEpoch)) issues.push("epoch");
+	if (time.earthEpoch !== null && !Number.isFinite(time.earthEpoch)) issues.push("earthEpoch");
+
+	const converts = !time.async && time.earthEpoch !== null;
+	if (converts && (!Number.isFinite(time.earthRatio) || time.earthRatio <= 0)) issues.push("ratio");
+	return issues;
 }

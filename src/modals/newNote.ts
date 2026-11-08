@@ -3,6 +3,7 @@ import type LorePlugin from "../main";
 import type { TypeDefinition } from "../types";
 import { buildNoteContent, ensureFolder, sanitiseFileName } from "../noteFactory";
 import { IconChoice, IconPickerModal } from "./iconPicker";
+import { enterSubmits } from "./enterSubmits";
 
 /**
  * Creates a lore note from its type's template, filling in the fields the
@@ -28,6 +29,7 @@ export class NewNoteModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("new.title"));
 

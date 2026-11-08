@@ -3,10 +3,13 @@ import type LorePlugin from "./main";
 import { IconChoice, IconPickerModal } from "./modals/iconPicker";
 import { TimePickerModal, TimeValue } from "./modals/timePicker";
 import { VersionMenuModal } from "./modals/versionMenu";
+import { openTimeSystemEditor } from "./modals/timeSystem";
 import { isTimePrecision } from "./time";
 import { asNumberOrNull, asString } from "./frontmatter";
 
 const BANNER_CLASS = "plc-banner";
+/** Marks a view showing a lore note, so CSS hides Properties only there. */
+const LORE_NOTE_CLASS = "plc-lore-note";
 
 const STATUSES = ["draft", "partial", "done"] as const;
 type Status = (typeof STATUSES)[number];
@@ -41,6 +44,7 @@ export class Banner {
 
 	private remove(view: MarkdownView) {
 		view.contentEl.findAll(`.${BANNER_CLASS}`).forEach((el) => el.remove());
+		view.contentEl.removeClass(LORE_NOTE_CLASS);
 	}
 
 	render(view: MarkdownView) {
@@ -64,6 +68,7 @@ export class Banner {
 		this.buildTimeRow(bannerEl, file, frontmatter);
 
 		view.contentEl.prepend(bannerEl);
+		view.contentEl.addClass(LORE_NOTE_CLASS);
 	}
 
 	private buildHeadRow(
@@ -156,8 +161,11 @@ export class Banner {
 			text = this.plugin.i18n.t("banner.noTime");
 		} else {
 			const timeSystem = this.plugin.universe.readTime();
-			const head = label || this.plugin.universe.formatTime(time, timeSystem);
-			const tail = timeEnd === null ? "" : ` – ${this.plugin.universe.formatTime(timeEnd, timeSystem)}`;
+			const precision = isTimePrecision(frontmatter["time-precision"]) ? frontmatter["time-precision"] : "year";
+			const format = (value: number) =>
+				this.plugin.universe.formatTime(value, precision, this.plugin.language, timeSystem);
+			const head = label || format(time);
+			const tail = timeEnd === null ? "" : ` – ${format(timeEnd)}`;
 			const prefix = uncertain ? `~ ` : "";
 			text = `${prefix}${head}${tail}`;
 
@@ -235,6 +243,7 @@ export class Banner {
 					}
 				});
 			},
+			() => openTimeSystemEditor(this.plugin),
 		).open();
 	}
 }

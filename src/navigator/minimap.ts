@@ -1,7 +1,8 @@
 import { TFile } from "obsidian";
 import type LorePlugin from "../main";
-import { TimelineModel, TimelineNode } from "../timeline/model";
-import { computeLayout } from "../timeline/layout";
+import { TimelineEdge, TimelineModel, TimelineNode } from "../timeline/model";
+import { autoPixelsPerUnit, computeLayout } from "../timeline/layout";
+import { visibleEdges } from "../timeline/interaction";
 
 export type MinimapMode = "wide" | "near";
 
@@ -53,7 +54,7 @@ export class Minimap {
 		const boxes = mode === "wide" ? this.wideBoxes(graph, timelineId) : this.nearBoxes(graph, current);
 		if (boxes.length === 0) return;
 
-		this.draw(container, boxes, current, highlight);
+		this.draw(container, boxes, graph.edges, current, highlight);
 	}
 
 	private wideBoxes(
@@ -61,9 +62,13 @@ export class Minimap {
 		timelineId: string,
 	): Box[] {
 		const definition = this.model.definitions().find((entry) => entry.id === timelineId);
+		// Same scale rule as the canvas, so a story spanning ages fits the map
+		// as well as one spanning weeks.
+		const times = graph.nodes.map((node) => node.time).filter((time): time is number => time !== null);
+		const span = times.length > 1 ? Math.max(...times) - Math.min(...times) : 0;
 		const layout = computeLayout(graph, {
 			flows: definition?.flows ?? [],
-			pixelsPerUnit: 6,
+			pixelsPerUnit: autoPixelsPerUnit(span),
 			unnamedFlowLabel: "",
 			untimedLabel: "",
 			formatTick: () => "",
@@ -117,7 +122,7 @@ export class Minimap {
 		];
 	}
 
-	private draw(container: HTMLElement, boxes: Box[], current: TFile, highlight: TFile | null) {
+	private draw(container: HTMLElement, boxes: Box[], edges: TimelineEdge[], current: TFile, highlight: TFile | null) {
 		const minX = Math.min(...boxes.map((box) => box.x));
 		const minY = Math.min(...boxes.map((box) => box.y));
 		const maxX = Math.max(...boxes.map((box) => box.x + box.width));
@@ -132,27 +137,26 @@ export class Minimap {
 
 		const byPath = new Map(boxes.map((box) => [box.node.path, box]));
 
-		// Connectors are drawn from the boxes actually on screen, so near mode does
-		// not sprout lines heading off to nodes it left out.
-		for (const box of boxes) {
-			for (const link of box.node.next) {
-				const target = this.plugin.app.metadataCache.getFirstLinkpathDest(link, box.node.path);
-				const targetBox = target ? byPath.get(target.path) : undefined;
-				if (!targetBox) continue;
+		// Connectors come from the timeline's own edges — `next` and `prev` alike —
+		// and only between boxes actually on screen, so near mode does not sprout
+		// lines heading off to nodes it left out.
+		for (const edge of visibleEdges(edges, new Set(byPath.keys()))) {
+			const box = byPath.get(edge.from);
+			const targetBox = byPath.get(edge.to);
+			if (!box || !targetBox) continue;
 
-				const x1 = box.x + box.width;
-				const y1 = box.y + box.height / 2;
-				const x2 = targetBox.x;
-				const y2 = targetBox.y + targetBox.height / 2;
-				const reach = Math.max(20, Math.abs(x2 - x1) * 0.4);
+			const x1 = box.x + box.width;
+			const y1 = box.y + box.height / 2;
+			const x2 = targetBox.x;
+			const y2 = targetBox.y + targetBox.height / 2;
+			const reach = Math.max(20, Math.abs(x2 - x1) * 0.4);
 
-				svg.appendChild(
-					svgEl("path", {
-						d: `M ${x1} ${y1} C ${x1 + reach} ${y1}, ${x2 - reach} ${y2}, ${x2} ${y2}`,
-						class: "plc-minimap-edge",
-					}),
-				);
-			}
+			svg.appendChild(
+				svgEl("path", {
+					d: `M ${x1} ${y1} C ${x1 + reach} ${y1}, ${x2 - reach} ${y2}, ${x2} ${y2}`,
+					class: "plc-minimap-edge",
+				}),
+			);
 		}
 
 		for (const box of boxes) {

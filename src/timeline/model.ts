@@ -1,6 +1,8 @@
 import { App, TFile } from "obsidian";
-import { linkTargets } from "../links";
+import { linkTarget, linkTargets } from "../links";
 import { asNumberOrNull, asString } from "../frontmatter";
+import { TimePrecision, isTimePrecision } from "../time";
+import { loreFiles } from "../scope";
 
 export type NodeStatus = "draft" | "partial" | "done";
 
@@ -15,7 +17,10 @@ export interface TimelineDefinition {
 	file: TFile;
 	kind: "primary" | "parallel";
 	flows: FlowDefinition[];
+	/** Link text of the timeline this one split from (`diverges-from`). */
 	divergesFrom: string;
+	/** Link text of the note, on the parent timeline, where it split (`divergence-point`). */
+	divergencePoint: string;
 }
 
 export interface TimelineNode {
@@ -31,6 +36,8 @@ export interface TimelineNode {
 	time: number | null;
 	timeEnd: number | null;
 	timeLabel: string;
+	/** How finely `time` was set; missing or invalid counts as `year`. */
+	precision: TimePrecision;
 	uncertain: boolean;
 	next: string[];
 	prev: string[];
@@ -46,7 +53,8 @@ export interface TimelineGraph {
 	edges: TimelineEdge[];
 }
 
-function asStatus(value: unknown): NodeStatus {
+/** Missing or unknown reads as `draft`: untouched is the default state of a note. */
+export function asStatus(value: unknown): NodeStatus {
 	return value === "partial" || value === "done" ? value : "draft";
 }
 
@@ -80,26 +88,101 @@ function parseFlows(value: unknown): FlowDefinition[] {
 	return flows;
 }
 
+/** Everything one pass over the vault yields, reused until something changes. */
+interface Snapshot {
+	definitions: TimelineDefinition[];
+	referenced: string[];
+	nodesByTimeline: Map<string, TimelineNode[]>;
+	graphs: Map<string, TimelineGraph>;
+}
+
+/**
+ * Shared by every model instance: the vault is one, so is its snapshot. The
+ * plugin drops it on every metadata change, delete and rename.
+ */
+let snapshot: Snapshot | null = null;
+
 export class TimelineModel {
 	constructor(private app: App) {}
 
+	/** Forgets the cached snapshot; the next read rescans the vault once. */
+	static invalidate() {
+		snapshot = null;
+	}
+
 	/** Timeline notes declare the realities the author can switch between. */
 	definitions(): TimelineDefinition[] {
+		return [...this.snapshot().definitions];
+	}
+
+	/**
+	 * A timeline named either by id (`main`) or by a link to its note
+	 * (`[[Main timeline]]`) comes back as the id, so fields like
+	 * `timeline-scope` accept both spellings. Anything else is returned as text.
+	 */
+	resolveTimelineId(text: string, sourcePath: string): string {
+		const target = linkTarget(text);
+		const { definitions } = this.snapshot();
+		// A bare id that names a timeline is that timeline, even when a note
+		// happens to share the name; only `[[...]]` asks for file resolution.
+		const bracketed = text.trim().startsWith("[[");
+		if (!bracketed && definitions.some((entry) => entry.id === target)) return target;
+		const file = this.app.metadataCache.getFirstLinkpathDest(target, sourcePath);
+		if (file) {
+			const definition = definitions.find((entry) => entry.file.path === file.path);
+			if (definition) return definition.id;
+		}
+		return target;
+	}
+
+	/** Every timeline id referenced by a note, including ones with no definition note. */
+	referencedTimelineIds(): string[] {
+		return [...this.snapshot().referenced];
+	}
+
+	graph(timelineId: string): TimelineGraph {
+		const current = this.snapshot();
+		const cached = current.graphs.get(timelineId);
+		if (cached) return cached;
+
+		const nodes = current.nodesByTimeline.get(timelineId) ?? [];
+		const byPath = new Map(nodes.map((node) => [node.path, node]));
+		const graph = { nodes, edges: this.collectEdges(nodes, byPath) };
+		current.graphs.set(timelineId, graph);
+		return graph;
+	}
+
+	private snapshot(): Snapshot {
+		snapshot ??= this.scan();
+		return snapshot;
+	}
+
+	/** The single vault pass behind every read above. */
+	private scan(): Snapshot {
 		const definitions: TimelineDefinition[] = [];
+		const referenced = new Set<string>();
+		const nodesByTimeline = new Map<string, TimelineNode[]>();
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of loreFiles(this.app)) {
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (!frontmatter || frontmatter.type !== "timeline") continue;
+			if (!frontmatter) continue;
 
-			const id = asString(frontmatter["timeline-id"]).trim() || file.basename;
-			definitions.push({
-				id,
-				name: file.basename,
-				file,
-				kind: frontmatter["timeline-kind"] === "parallel" ? "parallel" : "primary",
-				flows: parseFlows(frontmatter.flows),
-				divergesFrom: linkTargets(frontmatter["diverges-from"])[0] ?? "",
-			});
+			if (frontmatter.type === "timeline") definitions.push(this.definition(file, frontmatter));
+
+			const timelineId = asString(frontmatter.timeline).trim();
+			if (!timelineId) continue;
+			referenced.add(timelineId);
+
+			// Archived versions live alongside their note; drawing them too would
+			// double every fragment the author has ever revised.
+			if (frontmatter["version-of"]) continue;
+
+			let nodes = nodesByTimeline.get(timelineId);
+			if (!nodes) {
+				nodes = [];
+				nodesByTimeline.set(timelineId, nodes);
+			}
+			nodes.push(this.node(file, frontmatter, timelineId));
 		}
 
 		// Primary realities first, then alphabetical, so the main universe leads.
@@ -107,58 +190,42 @@ export class TimelineModel {
 			if (a.kind !== b.kind) return a.kind === "primary" ? -1 : 1;
 			return a.name.localeCompare(b.name);
 		});
-		return definitions;
+
+		return { definitions, referenced: [...referenced].sort(), nodesByTimeline, graphs: new Map() };
 	}
 
-	/** Every timeline id referenced by a note, including ones with no definition note. */
-	referencedTimelineIds(): string[] {
-		const ids = new Set<string>();
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			const id = asString(frontmatter?.timeline).trim();
-			if (id) ids.add(id);
-		}
-		return [...ids].sort();
-	}
-
-	graph(timelineId: string): TimelineGraph {
-		const nodes = this.collectNodes(timelineId);
-		const byPath = new Map(nodes.map((node) => [node.path, node]));
-		return { nodes, edges: this.collectEdges(nodes, byPath) };
-	}
-
-	private collectNodes(timelineId: string): TimelineNode[] {
-		const nodes: TimelineNode[] = [];
-
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (!frontmatter) continue;
-
-			// Archived versions live alongside their note; drawing them too would
-			// double every fragment the author has ever revised.
-			if (frontmatter["version-of"]) continue;
-			if (asString(frontmatter.timeline).trim() !== timelineId) continue;
-
-			nodes.push({
-				path: file.path,
+	private definition(file: TFile, frontmatter: Record<string, unknown>): TimelineDefinition {
+		const id = asString(frontmatter["timeline-id"]).trim() || file.basename;
+		return {
+				id,
+				name: file.basename,
 				file,
-				title: file.basename,
-				icon: asString(frontmatter.icon),
-				iconType: frontmatter["icon-type"] === "lucide" ? "lucide" : "emoji",
-				type: asString(frontmatter.type),
-				status: asStatus(frontmatter.status),
-				timeline: timelineId,
-				flow: asString(frontmatter.flow).trim(),
-				time: asNumberOrNull(frontmatter.time),
-				timeEnd: asNumberOrNull(frontmatter["time-end"]),
-				timeLabel: asString(frontmatter["time-label"]),
-				uncertain: frontmatter["time-uncertain"] === true,
-				next: linkTargets(frontmatter.next),
-				prev: linkTargets(frontmatter.prev),
-			});
-		}
+				kind: frontmatter["timeline-kind"] === "parallel" ? "parallel" : "primary",
+				flows: parseFlows(frontmatter.flows),
+				divergesFrom: linkTargets(frontmatter["diverges-from"])[0] ?? "",
+				divergencePoint: linkTargets(frontmatter["divergence-point"])[0] ?? "",
+		};
+	}
 
-		return nodes;
+	private node(file: TFile, frontmatter: Record<string, unknown>, timelineId: string): TimelineNode {
+		return {
+			path: file.path,
+			file,
+			title: file.basename,
+			icon: asString(frontmatter.icon),
+			iconType: frontmatter["icon-type"] === "lucide" ? "lucide" : "emoji",
+			type: asString(frontmatter.type),
+			status: asStatus(frontmatter.status),
+			timeline: timelineId,
+			flow: asString(frontmatter.flow).trim(),
+			time: asNumberOrNull(frontmatter.time),
+			timeEnd: asNumberOrNull(frontmatter["time-end"]),
+			timeLabel: asString(frontmatter["time-label"]),
+			precision: isTimePrecision(frontmatter["time-precision"]) ? frontmatter["time-precision"] : "year",
+			uncertain: frontmatter["time-uncertain"] === true,
+			next: linkTargets(frontmatter.next),
+			prev: linkTargets(frontmatter.prev),
+		};
 	}
 
 	/**
@@ -198,7 +265,7 @@ export class TimelineModel {
 
 	/** Connections pointing at notes outside this timeline, reported not fixed. */
 	danglingLinks(timelineId: string): { node: TimelineNode; link: string }[] {
-		const nodes = this.collectNodes(timelineId);
+		const nodes = this.graph(timelineId).nodes;
 		const paths = new Set(nodes.map((node) => node.path));
 		const dangling: { node: TimelineNode; link: string }[] = [];
 

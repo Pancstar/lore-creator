@@ -4,8 +4,9 @@ import { LawsView, VIEW_TYPE_LAWS } from "./laws";
 import { DraftsView, VIEW_TYPE_DRAFTS } from "./drafts";
 import { DashboardView, VIEW_TYPE_DASHBOARD } from "./dashboard";
 import type LorePlugin from "../main";
+import { GuideView, VIEW_TYPE_GUIDE } from "../guide/view";
 
-export { VIEW_TYPE_TIMELINE, VIEW_TYPE_LAWS, VIEW_TYPE_DRAFTS, VIEW_TYPE_DASHBOARD };
+export { VIEW_TYPE_TIMELINE, VIEW_TYPE_LAWS, VIEW_TYPE_DRAFTS, VIEW_TYPE_DASHBOARD, VIEW_TYPE_GUIDE };
 
 export interface ViewDefinition {
 	type: string;
@@ -56,6 +57,16 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		placement: "sidebar",
 		create: (leaf, plugin) => new DashboardView(leaf, plugin),
 	},
+	{
+		type: VIEW_TYPE_GUIDE,
+		titleKey: "view.guide",
+		commandKey: "command.openGuide",
+		icon: "book-open",
+		placement: "main",
+		// The guide is how a newcomer finds their way back, so it earns a button.
+		ribbon: true,
+		create: (leaf, plugin) => new GuideView(leaf, plugin),
+	},
 ];
 
-export { TimelineView, LawsView, DraftsView, DashboardView };
+export { TimelineView, LawsView, DraftsView, DashboardView, GuideView };

@@ -3,6 +3,9 @@ import type LorePlugin from "../main";
 import { extractBody, ensureFolder, sanitiseFileName } from "../noteFactory";
 import { TimelineModel } from "../timeline/model";
 import { asNumberOrNull, asString } from "../frontmatter";
+import { TimePrecision, isTimePrecision } from "../time";
+import { loreFiles } from "../scope";
+import { enterSubmits } from "./enterSubmits";
 
 const ALL = "__all";
 
@@ -13,6 +16,7 @@ interface Entry {
 	type: string;
 	time: number | null;
 	timeLabel: string;
+	precision: TimePrecision;
 }
 
 /**
@@ -36,6 +40,7 @@ export class ExportModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("export.title"));
 		this.contentEl.createEl("p", { cls: "setting-item-description", text: t("export.desc") });
@@ -95,7 +100,7 @@ export class ExportModal extends Modal {
 	private collect(): Entry[] {
 		const entries: Entry[] = [];
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of loreFiles(this.app)) {
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			if (!frontmatter || frontmatter["version-of"]) continue;
 
@@ -119,6 +124,7 @@ export class ExportModal extends Modal {
 				type,
 				time: asNumberOrNull(frontmatter.time),
 				timeLabel: asString(frontmatter["time-label"]),
+				precision: isTimePrecision(frontmatter["time-precision"]) ? frontmatter["time-precision"] : "year",
 			});
 		}
 
@@ -212,7 +218,12 @@ export class ExportModal extends Modal {
 			for (const entry of group) {
 				const heading = entry.icon ? `${entry.icon} ${entry.title}` : entry.title;
 				lines.push(`### ${heading}`, "");
-				if (entry.timeLabel) lines.push(`*${entry.timeLabel}*`, "");
+				const when =
+					entry.timeLabel ||
+					(entry.time === null
+						? ""
+						: this.plugin.universe.formatTime(entry.time, entry.precision, this.plugin.language));
+				if (when) lines.push(`*${when}*`, "");
 
 				const content = await this.app.vault.cachedRead(entry.file);
 				const body = extractBody(content).trim();

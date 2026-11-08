@@ -2,6 +2,7 @@ import { App, TFile, normalizePath } from "obsidian";
 import { linkTarget } from "../links";
 import { VersionStore } from "./store";
 import { asString } from "../frontmatter";
+import { loreFiles } from "../scope";
 
 export interface VersionSetEntry {
 	/** Link text pointing at the active note, e.g. `Yükseliş`. */
@@ -103,7 +104,7 @@ export class VersionSetStore {
 	/** Every note in the vault that has more than one version. */
 	versionedNotes(): TFile[] {
 		const notes: TFile[] = [];
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of loreFiles(this.app)) {
 			if (this.versions.isArchived(file)) continue;
 			if (this.versions.hasMultiple(file)) notes.push(file);
 		}

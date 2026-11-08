@@ -1,7 +1,8 @@
-import { App, Notice, PluginSettingTab, SettingDefinitionItem } from "obsidian";
+import { App, Notice, PluginSettingTab, SettingDefinitionItem, debounce } from "obsidian";
 import type LorePlugin from "./main";
 import type { Language } from "./i18n";
 import { SetupModal } from "./setup/wizard";
+import { openTimeSystemEditor } from "./modals/timeSystem";
 
 export interface LoreSettings {
 	language: Language;
@@ -19,6 +20,12 @@ export interface LoreSettings {
 	timelineLocked: boolean;
 	/** Cleared once the vault has been set up, so the offer is made only once. */
 	setupOffered: boolean;
+	/** The guide opens by itself once; after that only on request. */
+	guideShown: boolean;
+	/** Guide chapters already opened, for the ✅ marks in its menu. */
+	guideRead: string[];
+	/** Consistency report kinds the author switched off; they leave the count too. */
+	auditHidden: string[];
 }
 
 /**
@@ -40,6 +47,9 @@ export const DEFAULT_SETTINGS: LoreSettings = {
 	timeDensity: 1,
 	timelineLocked: false,
 	setupOffered: false,
+	guideShown: false,
+	guideRead: [],
+	auditHidden: [],
 };
 
 /** A path field's key within `LoreSettings`, and the default it falls back to when cleared. */
@@ -58,11 +68,33 @@ function isPathField(key: string): key is PathField {
 }
 
 export class LoreSettingTab extends PluginSettingTab {
+	/**
+	 * The time name lives in the universe note, and each write rewrites that
+	 * note and redraws every view. Typing is buffered here and written once the
+	 * author pauses or leaves the tab.
+	 */
+	private pendingTimeName: string | null = null;
+	private flushTimeName = debounce(() => void this.writeTimeName(), 500, true);
+
 	constructor(
 		app: App,
 		private plugin: LorePlugin,
 	) {
 		super(app, plugin);
+	}
+
+	hide() {
+		this.flushTimeName.run();
+		super.hide();
+	}
+
+	private async writeTimeName() {
+		const name = this.pendingTimeName;
+		if (name === null) return;
+		this.pendingTimeName = null;
+		const current = this.plugin.universe.readTime();
+		if (current.timeName === name) return;
+		await this.plugin.universe.writeTime({ ...current, timeName: name });
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -158,12 +190,36 @@ export class LoreSettingTab extends PluginSettingTab {
 						},
 					},
 					{
+						name: t("settings.time.edit"),
+						desc: t("settings.time.edit.desc"),
+						visible: () => !!this.plugin.universe.file,
+						action: () => {
+							// A name still waiting in the debounce is not in the
+							// metadata cache yet; hand it to the editor so its Save
+							// does not write the old name back.
+							const pending = this.pendingTimeName;
+							this.flushTimeName.run();
+							openTimeSystemEditor(this.plugin, pending === null ? {} : { timeName: pending });
+						},
+					},
+					{
 						name: t("settings.time.openUniverse"),
 						visible: () => !!this.plugin.universe.file,
 						action: () => {
 							const file = this.plugin.universe.file;
 							if (file) void this.app.workspace.getLeaf(false).openFile(file);
 						},
+					},
+				],
+			},
+			{
+				type: "group",
+				heading: t("settings.help"),
+				items: [
+					{
+						name: t("settings.openGuide"),
+						desc: t("settings.openGuide.desc"),
+						action: () => void this.plugin.openGuide(),
 					},
 				],
 			},
@@ -199,7 +255,7 @@ export class LoreSettingTab extends PluginSettingTab {
 
 	getControlValue(key: string): unknown {
 		if (key === "time:name") {
-			return this.plugin.universe.readTime().timeName;
+			return this.pendingTimeName ?? this.plugin.universe.readTime().timeName;
 		}
 
 		if (key.startsWith("path:")) {
@@ -224,8 +280,8 @@ export class LoreSettingTab extends PluginSettingTab {
 	async setControlValue(key: string, value: unknown): Promise<void> {
 		if (key === "time:name") {
 			if (typeof value !== "string") return;
-			const current = this.plugin.universe.readTime();
-			await this.plugin.universe.writeTime({ ...current, timeName: value });
+			this.pendingTimeName = value;
+			this.flushTimeName();
 			return;
 		}
 

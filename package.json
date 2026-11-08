@@ -1,13 +1,14 @@
 {
 	"name": "lore-creator",
-	"version": "0.3.0",
+	"version": "0.8.0",
 	"description": "Design fictional universes: branching timelines, versioned story fragments, custom time systems and structured worldbuilding entities.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"lint": "eslint .",
 		"build": "tsc -noEmit -skipLibCheck && eslint . && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"test": "vitest run"
 	},
 	"keywords": [
 		"obsidian",
@@ -26,6 +27,7 @@
 		"obsidian": "latest",
 		"tslib": "^2.8.1",
 		"typescript": "^5.7.2",
-		"typescript-eslint": "^8.65.0"
+		"typescript-eslint": "^8.65.0",
+		"vitest": "^3.2.7"
 	}
 }

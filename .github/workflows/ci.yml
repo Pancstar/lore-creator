@@ -1,0 +1,27 @@
+name: CI
+
+# Type-checks, lints and bundles every push and pull request, so a broken build
+# is caught long before a release tag is pushed.
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test

@@ -67,6 +67,15 @@ export class Navigator {
 		if (!file) return;
 
 		const frontmatter = this.plugin.app.metadataCache.getFileCache(file)?.frontmatter;
+
+		// An archived draft is not part of the story's path; say so and point
+		// back to the live version instead of offering next/prev from the past.
+		if (frontmatter?.["version-of"]) {
+			view.contentEl.addClass(HOST_CLASS);
+			this.buildArchiveBar(view.contentEl, file, frontmatter);
+			return;
+		}
+
 		const timeline = asString(frontmatter?.timeline).trim();
 		if (!timeline) return;
 
@@ -131,6 +140,27 @@ export class Navigator {
 				this.syncMap(mapEl, file, null);
 			});
 		}
+	}
+
+	private buildArchiveBar(host: HTMLElement, file: TFile, frontmatter: Record<string, unknown>) {
+		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		const barEl = host.createDiv({ cls: `${BAR_CLASS} is-archive` });
+
+		const version = asString(frontmatter.version).trim();
+		const name = asString(frontmatter["version-name"]).trim();
+		const infoEl = barEl.createDiv({ cls: "plc-navbar-context" });
+		const iconEl = infoEl.createSpan({ cls: "plc-navbar-arrow" });
+		setIcon(iconEl, "archive");
+		infoEl.createSpan({ text: ` ${t("nav.archived", version).trim()}${name ? ` · ${name}` : ""}` });
+
+		const active = resolveTargets(this.plugin.app, frontmatter["version-of"], file.path)[0];
+		if (!active) return;
+		const button = barEl.createEl("button", { cls: "plc-navbar-button mod-cta" });
+		button.createSpan({ cls: "plc-navbar-label", text: t("nav.goActive") });
+		button.addEventListener("click", (event) => {
+			const newTab = event.ctrlKey || event.metaKey;
+			void this.plugin.app.workspace.getLeaf(newTab ? "tab" : false).openFile(active);
+		});
 	}
 
 	private buildContext(bar: HTMLElement, frontmatter: Record<string, unknown> | undefined, timeline: string) {

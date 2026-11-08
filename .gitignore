@@ -14,8 +14,10 @@ development-logs/
 .agents/
 STATUS.md
 STATUS-ARSIV.md
-AI_RULES.md
+AGENTS.md
+GEMINI.md
 PROJECT_META.json
+.pannot/
 plans/
 design/
 scripts/

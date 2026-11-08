@@ -3,6 +3,8 @@ import type LorePlugin from "../main";
 import { linkTarget } from "../links";
 import { PromoteModal } from "../modals/promote";
 import { asString } from "../frontmatter";
+import { loreFiles } from "../scope";
+import { addExampleBadge } from "../guide/badge";
 
 export const VIEW_TYPE_DRAFTS = "plc-drafts";
 
@@ -46,7 +48,7 @@ export class DraftsView extends ItemView {
 	private collect(): Draft[] {
 		const drafts: Draft[] = [];
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of loreFiles(this.app)) {
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			if (frontmatter?.type !== "draft") continue;
 			if (frontmatter["version-of"]) continue;
@@ -55,7 +57,8 @@ export class DraftsView extends ItemView {
 				file,
 				title: file.basename,
 				icon: asString(frontmatter.icon) || "💭",
-				ideaFor: asString(frontmatter["idea-for"]).trim(),
+				// A link like [[Scene]] groups under "Scene", not under its brackets.
+				ideaFor: linkTarget(frontmatter["idea-for"]),
 				promotedTo: linkTarget(frontmatter["promoted-to"]),
 			});
 		}
@@ -102,6 +105,7 @@ export class DraftsView extends ItemView {
 		const headEl = rowEl.createDiv({ cls: "plc-list-head" });
 		headEl.createSpan({ cls: "plc-list-icon", text: draft.icon });
 		headEl.createSpan({ cls: "plc-list-title", text: draft.title });
+		addExampleBadge(headEl, this.app, draft.file, this.plugin.i18n.t("guide.badge.example"));
 		headEl.addEventListener("click", () => {
 			void this.app.workspace.getLeaf(false).openFile(draft.file);
 		});

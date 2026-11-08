@@ -1,25 +1,12 @@
-import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, setIcon } from "obsidian";
 import type LorePlugin from "../main";
-import { linkTargets } from "../links";
 import { TimelineModel } from "../timeline/model";
-import { asString } from "../frontmatter";
+import { Law, collectLaws } from "../lawsModel";
+import { addExampleBadge } from "../guide/badge";
 
 export const VIEW_TYPE_LAWS = "plc-laws";
 
 const ALL_TIMELINES = "__all";
-
-interface Law {
-	file: TFile;
-	title: string;
-	icon: string;
-	scope: "universe" | "local";
-	appliesTo: string[];
-	timelineScope: string[];
-	/** Notes declaring they are subject to this law. */
-	boundBy: TFile[];
-	/** Notes declaring they break it — the reason this view is worth having. */
-	brokenBy: TFile[];
-}
 
 export class LawsView extends ItemView {
 	private model: TimelineModel;
@@ -50,55 +37,11 @@ export class LawsView extends ItemView {
 		this.render();
 	}
 
-	/**
-	 * Walks every note once and inverts the `laws` and `breaks-law` fields, so a
-	 * law can show what obeys it and what defies it. Following those links by
-	 * hand across a growing vault is exactly what nobody manages to keep up.
-	 */
-	private collect(): Law[] {
-		const laws = new Map<string, Law>();
-
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (frontmatter?.type !== "law") continue;
-			if (frontmatter["version-of"]) continue;
-
-			laws.set(file.path, {
-				file,
-				title: file.basename,
-				icon: asString(frontmatter.icon) || "📜",
-				scope: frontmatter.scope === "local" ? "local" : "universe",
-				appliesTo: linkTargets(frontmatter["applies-to"]),
-				timelineScope: linkTargets(frontmatter["timeline-scope"]),
-				boundBy: [],
-				brokenBy: [],
-			});
-		}
-
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (!frontmatter || frontmatter["version-of"]) continue;
-
-			const attach = (field: string, bucket: "boundBy" | "brokenBy") => {
-				for (const link of linkTargets(frontmatter[field])) {
-					const target = this.app.metadataCache.getFirstLinkpathDest(link, file.path);
-					const law = target ? laws.get(target.path) : undefined;
-					if (law) law[bucket].push(file);
-				}
-			};
-
-			attach("laws", "boundBy");
-			attach("breaks-law", "brokenBy");
-		}
-
-		return [...laws.values()].sort((a, b) => a.title.localeCompare(b.title));
-	}
-
 	render() {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.contentEl.empty();
 
-		const all = this.collect();
+		const all = collectLaws(this.app, this.model);
 		if (all.length === 0) {
 			this.renderEmpty(t("laws.empty.title"), t("laws.empty.body"));
 			return;
@@ -148,6 +91,7 @@ export class LawsView extends ItemView {
 			const headEl = rowEl.createDiv({ cls: "plc-list-head" });
 			headEl.createSpan({ cls: "plc-list-icon", text: law.icon });
 			headEl.createSpan({ cls: "plc-list-title", text: law.title });
+			addExampleBadge(headEl, this.app, law.file, this.plugin.i18n.t("guide.badge.example"));
 			headEl.addEventListener("click", () => {
 				void this.app.workspace.getLeaf(false).openFile(law.file);
 			});

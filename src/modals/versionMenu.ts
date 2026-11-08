@@ -2,6 +2,8 @@ import { App, Modal, Notice, Setting, TFile, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { VersionEntry, VersionError } from "../versions/store";
 import { ConfirmModal } from "./confirm";
+import { LiveRefresh } from "./liveRefresh";
+import { enterSubmits } from "./enterSubmits";
 
 /**
  * Lists a note's versions and performs the file moves behind them. Every action
@@ -9,6 +11,7 @@ import { ConfirmModal } from "./confirm";
  */
 export class VersionMenuModal extends Modal {
 	private active: TFile;
+	private live = new LiveRefresh(this.app, () => this.renderBody());
 
 	constructor(
 		app: App,
@@ -20,8 +23,10 @@ export class VersionMenuModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.plugin.i18n.t("version.title"));
 		this.contentEl.addClass("plc-versions");
+		this.live.start();
 		this.renderBody();
 	}
 
@@ -104,6 +109,7 @@ export class VersionMenuModal extends Modal {
 
 	private confirmCreate() {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		if (this.live.busy) return;
 		const preview = this.plugin.versions.previewCreate(this.active);
 
 		new NewVersionModal(this.app, this.plugin, (name, note) => {
@@ -127,9 +133,8 @@ export class VersionMenuModal extends Modal {
 	private async runCreate(name: string, note: string) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		try {
-			await this.plugin.versions.createVersion(this.active, name, note);
-			new Notice(t("version.created"));
-			this.renderBody();
+			const ran = await this.live.run(() => this.plugin.versions.createVersion(this.active, name, note));
+			if (ran) new Notice(t("version.created"));
 		} catch (error) {
 			this.reportFailure(error);
 		}
@@ -137,6 +142,7 @@ export class VersionMenuModal extends Modal {
 
 	private confirmSwitch(entry: VersionEntry) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		if (this.live.busy) return;
 		const preview = this.plugin.versions.previewSwitch(this.active, entry.file);
 		const current = this.plugin.versions.info(this.active);
 
@@ -159,9 +165,8 @@ export class VersionMenuModal extends Modal {
 	private async runSwitch(entry: VersionEntry) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		try {
-			await this.plugin.versions.switchTo(this.active, entry.file);
-			new Notice(t("version.switched", `v${entry.number}`));
-			this.renderBody();
+			const ran = await this.live.run(() => this.plugin.versions.switchTo(this.active, entry.file));
+			if (ran) new Notice(t("version.switched", `v${entry.number}`));
 		} catch (error) {
 			this.reportFailure(error);
 		}
@@ -169,6 +174,7 @@ export class VersionMenuModal extends Modal {
 
 	private confirmDelete(entry: VersionEntry) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		if (this.live.busy) return;
 
 		new ConfirmModal(
 			this.app,
@@ -187,9 +193,8 @@ export class VersionMenuModal extends Modal {
 	private async runDelete(entry: VersionEntry) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		try {
-			await this.plugin.versions.deleteVersion(entry.file);
-			new Notice(t("version.deleted"));
-			this.renderBody();
+			const ran = await this.live.run(() => this.plugin.versions.deleteVersion(entry.file));
+			if (ran) new Notice(t("version.deleted"));
 		} catch (error) {
 			this.reportFailure(error);
 		}
@@ -200,13 +205,17 @@ export class VersionMenuModal extends Modal {
 		console.error("Lore Creator: version operation failed", error);
 
 		if (error instanceof VersionError) {
-			new Notice(t("version.error.exists", error.message));
+			// The store throws a reason code for misuse, otherwise the blocking path.
+			if (error.message === "archived") new Notice(t("version.error.archived"));
+			else if (error.message === "active") new Notice(t("version.error.active"));
+			else new Notice(t("version.error.exists", error.message));
 			return;
 		}
 		new Notice(t("version.error.generic"));
 	}
 
 	onClose() {
+		this.live.stop();
 		this.contentEl.empty();
 	}
 }
@@ -225,6 +234,7 @@ class NewVersionModal extends Modal {
 	}
 
 	onOpen() {
+		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("version.create"));
 

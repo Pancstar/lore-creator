@@ -9,7 +9,7 @@
 
 <br/>
 
-[![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed?style=for-the-badge&logo=obsidian&logoColor=white)](https://obsidian.md)
+[![Obsidian](https://img.shields.io/badge/Obsidian-1.13.0%2B-7c3aed?style=for-the-badge&logo=obsidian&logoColor=white)](https://obsidian.md)
 [![Release](https://img.shields.io/github/v/release/PancstaR/lore-creator?style=for-the-badge&label=release&color=4f46e5)](https://github.com/PancstaR/lore-creator/releases/latest)
 [![Platform](https://img.shields.io/badge/Desktop%20%2B%20Mobile-0ea5e9?style=for-the-badge)](https://obsidian.md)
 [![Language](https://img.shields.io/badge/UI-EN%20%C2%B7%20TR-f59e0b?style=for-the-badge)](#-settings)
@@ -118,6 +118,7 @@ flowchart TD
 | 🧭 | **Navigation** | A bar under each note showing every place it leads, with a hover map |
 | 📊 | **Dashboard & consistency** | Counts, everything unfinished, and an advisory report |
 | 🔍 | **Search & export** | Filter by field, then build one Markdown document from what you choose |
+| 📖 | **Built-in guide** | A friendly tour inside Obsidian, with an FAQ and an example story to explore |
 
 ### 🌿 Branching timeline canvas
 
@@ -154,7 +155,16 @@ flowchart LR
   (`time-uncertain`).
 - Notes with **no time yet** get their own lane instead of vanishing.
 - Border colour reflects status; a dot marks fragments that have other versions.
-- Pan, zoom, click through to any note.
+- Pan, zoom, click through to any note. Lane names and dates stay pinned at
+  the edges while you pan.
+- **Filter** by status, flow or type, or **search** the canvas: what does not
+  match dims, nothing moves. Enter steps through the hits.
+- **Show the open note** jumps to the note you are writing, on whichever
+  timeline it sits.
+- **Keyboard:** Tab reaches the notes, arrows walk between them, Enter opens,
+  `+` `−` zoom, `0` fits, `/` searches. On touch, pinch to zoom.
+- A parallel timeline shows where it split from its parent, with a marker at
+  that moment.
 
 ### 📝 Versions that reshape the story
 
@@ -204,9 +214,15 @@ time-label: "Xen Year 134923, day 165"
 earth-time: 2050           # optional reference for readers
 ```
 
-Define the time system once — unit name, epoch, days per unit, and how it maps
-to Earth years — and the time picker fills in the number and the label for
-you. Or leave the mapping out and write the label yourself.
+Define the time system once — unit name, days per unit, and, if you want, how
+it maps to Earth years — and the time picker fills in the number and the label
+for you. Or leave the mapping out and write the label yourself.
+
+**Edit time system** (a command, also in settings) changes it later, with a
+live example and a warning before anything invalid is saved. If you change the
+number of days in a unit while notes already carry a date, it asks first: move
+those notes so each keeps the same day, or leave the numbers as they are. The
+move touches every dated note or none of them.
 
 ### 🗂️ Types and entities
 
@@ -273,6 +289,26 @@ An empty `next` means the thread ends there. Nothing is invented to fill it.
 | 🔍 | **Search** | Filters by type, status, timeline, flow and time range. Obsidian's own search already covers the words; this answers *"every unfinished character in the main universe"* |
 | 📤 | **Export** | One Markdown document from the sections you choose. This is why notes carry no privacy flag: what a reader sees is decided when you share, not stored on every note forever |
 
+### 📖 Built-in guide
+
+A tour written so that anyone can follow it, opened once by itself the first
+time the plugin starts. One chapter per screen, in four groups — *Getting
+started*, *While writing*, *Keeping track*, *Help* — with small diagrams, a
+progress bar and read marks. Chapters carry buttons that do the step they
+describe: set up the universe, set up time, make a note, open the timeline.
+
+The last chapter is a searchable FAQ. Field names appear only in the
+*For the curious* boxes, so the main text stays plain.
+
+**Example story.** *The Lantern Keepers* is a 13-page universe with two flows,
+three characters, a broken law, a draft idea and a note with two versions.
+It is written to its own folder in the language you choose, every page is
+marked with an *example* badge in the views, and one button removes it again
+(to the trash, never deleted outright). Pages you copied from it stay yours.
+
+Open the guide from the book icon in the ribbon, the **Open guide** command, or
+**Settings → Help**.
+
 ---
 
 ## 🚀 Getting started
@@ -287,11 +323,18 @@ Not yet in the community plugin browser. Until then:
 3. In Obsidian: **Settings → Community plugins**, turn off Restricted Mode, then
    enable *Lore Creator*.
 
+> [!TIP]
+> On first start the guide opens by itself. Its *Set up your universe* chapter
+> walks through the next two steps, and you can make the example story to see
+> every view filled in before writing your own.
+
 ### 🪄 Set up a vault
 
 Run **Set up this vault** from the command palette. It creates the folders,
 templates and type registry the views read from — previewing the exact tree
-first, and never overwriting a file that already exists.
+first, and never overwriting a file that already exists. One step asks for
+your time system: a unit name, days per unit, and an optional link to Earth
+years.
 
 ```
 📁 <vault>
@@ -401,9 +444,12 @@ flowchart LR
 | 🪄 | Set up this vault | Create folders, templates and the type registry |
 | 📄 | New lore note | Create a note from a type's template |
 | 🪟 | Open timeline / laws / drafts / dashboard | Open a view |
+| 📖 | Open guide | Open the built-in guide |
+| 📅 | Edit time system | Change the unit, days per unit and the link to Earth time |
 | 📝 | Versions of this note | List, create, switch and archive versions |
 | 📚 | Version sets | Capture and apply named snapshots |
 | 🧭 | Go to the next / previous fragment | Follow a connection; asks when there are several |
+| 🎯 | Show this note on the timeline | Open the timeline centred on the current note |
 | 💡 | Promote this draft | Turn a sketch into a real note |
 | 🔍 | Find in the universe | Search by field rather than by text |
 | 📤 | Export the universe | Build a single Markdown document |
@@ -425,7 +471,11 @@ Every path is configurable; these are the defaults:
 
 The time system is written into the universe note's frontmatter rather than
 plugin data, so a vault stays self-describing even without the plugin installed.
-The type registry lives in a note for the same reason.
+The type registry lives in a note for the same reason. Settings also has an
+**Edit time system** button and a **Help** group that opens the guide.
+
+Notes inside the templates folder are never counted as lore: they stay out of
+the timeline, dashboard, search, export and consistency report.
 
 Interface language follows Obsidian's own, or can be set explicitly. **🇬🇧 English
 and 🇹🇷 Turkish** are included. Frontmatter field names are English in every
@@ -437,28 +487,37 @@ language — they are data, not interface.
 
 ```bash
 npm install
-npm run dev     # esbuild watch — rebuilds main.js on save
-npm run build   # type-check, then produce a minified main.js
+npm run dev     # esbuild watch — rebuilds dist/ on save
+npm run lint    # eslint with eslint-plugin-obsidianmd
+npm run build   # type-check, lint, then a minified dist/main.js
 ```
 
+Every build writes `main.js`, `manifest.json` and `styles.css` into `dist/` —
+exactly the three files a vault's plugin folder needs.
+
 The sources live outside any vault. To work on the plugin, point a vault's
-plugin folder at this repository — a junction or symlink keeps it to one copy:
+plugin folder at `dist/` — a junction or symlink keeps it to one copy:
 
 ```bash
-# Windows, no administrator rights needed
-mklink /J "<vault>\.obsidian\plugins\lore-creator" "<path to this repo>"
+# Windows (cmd), no administrator rights needed
+mklink /J "<vault>\.obsidian\plugins\lore-creator" "<path to this repo>\dist"
+
+# Windows (PowerShell)
+New-Item -ItemType Junction -Path "<vault>\.obsidian\plugins\lore-creator" -Target "<path to this repo>\dist"
 
 # macOS and Linux
-ln -s "<path to this repo>" "<vault>/.obsidian/plugins/lore-creator"
+ln -s "<path to this repo>/dist" "<vault>/.obsidian/plugins/lore-creator"
 ```
 
 Obsidian does not reload plugins by itself.
 [Hot Reload](https://github.com/pjeby/hot-reload) picks up rebuilds
 automatically; without it, run *Reload app without saving* after each change.
 
+Every push and pull request runs `npm ci` and `npm run build` in CI.
+
 Releases are tagged with the version number exactly, with no `v` prefix. Pushing
 the tag builds the plugin and publishes `main.js`, `manifest.json` and
-`styles.css` as individual assets, which is what Obsidian expects.
+`styles.css` from `dist/` as individual assets, which is what Obsidian expects.
 
 There are no runtime dependencies — nothing third-party is bundled into
 `main.js`.

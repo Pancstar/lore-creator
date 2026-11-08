@@ -1,5 +1,6 @@
 import { App, TFile } from "obsidian";
 import { asNumber, asNumberOrNull, asString } from "./frontmatter";
+import { TimePrecision, formatTime } from "./time";
 
 /**
  * The universe's single time system, stored in the universe note's frontmatter
@@ -108,12 +109,16 @@ export class Universe {
 		return universeTime.earthEpoch + (time - universeTime.timeEpoch) * universeTime.earthRatio;
 	}
 
-	/** Default display label for a `time` value when a note has no `time-label`. */
-	formatTime(time: number, universeTime = this.readTime()): string {
-		const unit = universeTime.timeUnit.trim();
-		const name = universeTime.timeName.trim();
-		if (name && unit) return `${name} ${unit} ${time}`;
-		if (unit) return `${unit} ${time}`;
-		return String(time);
+	/**
+	 * Default display label for a `time` value when a note has no `time-label`,
+	 * in the universe's own words and at the note's precision.
+	 */
+	formatTime(
+		time: number,
+		precision: TimePrecision = "year",
+		language: "tr" | "en" = "en",
+		universeTime = this.readTime(),
+	): string {
+		return formatTime(time, universeTime, precision, language);
 	}
 }

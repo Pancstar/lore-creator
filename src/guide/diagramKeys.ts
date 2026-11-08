@@ -1,0 +1,20 @@
+/** Labels drawn inside the guide's diagrams; kept apart so the key check can see them. */
+export const DIAGRAM_KEYS = [
+	"guide.diagram.universe",
+	"guide.diagram.characters",
+	"guide.diagram.places",
+	"guide.diagram.events",
+	"guide.diagram.laws",
+	"guide.diagram.time",
+	"guide.diagram.laneA",
+	"guide.diagram.laneB",
+	"guide.diagram.event1",
+	"guide.diagram.event2",
+	"guide.diagram.event3",
+	"guide.diagram.next",
+	"guide.diagram.prev",
+	"guide.diagram.desk",
+	"guide.diagram.drawer",
+	"guide.diagram.draft1",
+	"guide.diagram.draft2",
+] as const;
