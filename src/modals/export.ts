@@ -36,7 +36,7 @@ export class ExportModal extends Modal {
 		private plugin: LorePlugin,
 	) {
 		super(app);
-		this.fileName = this.plugin.universe.name || "Evren";
+		this.fileName = this.plugin.universe.name || this.plugin.i18n.t("export.defaultName");
 	}
 
 	onOpen() {

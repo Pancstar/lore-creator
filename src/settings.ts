@@ -1,56 +1,13 @@
 import { App, Notice, PluginSettingTab, SettingDefinitionItem, debounce } from "obsidian";
 import type LorePlugin from "./main";
+import { DEFAULT_SETTINGS, LoreSettings } from "./settingsData";
 import type { Language } from "./i18n";
 import { SetupModal } from "./setup/wizard";
 import { openTimeSystemEditor } from "./modals/timeSystem";
 
-export interface LoreSettings {
-	language: Language;
-	universeFile: string;
-	registryFile: string;
-	versionsFolder: string;
-	templatesFolder: string;
-	versionSetsFile: string;
-	exportFolder: string;
-	showEarthTime: boolean;
-	minimapPinned: boolean;
-	minimapMode: "wide" | "near";
-	/** Multiplier on the automatic time scale, so the axis can be spread out. */
-	timeDensity: number;
-	timelineLocked: boolean;
-	/** Cleared once the vault has been set up, so the offer is made only once. */
-	setupOffered: boolean;
-	/** The guide opens by itself once; after that only on request. */
-	guideShown: boolean;
-	/** Guide chapters already opened, for the ✅ marks in its menu. */
-	guideRead: string[];
-	/** Consistency report kinds the author switched off; they leave the count too. */
-	auditHidden: string[];
-}
-
-/**
- * Paths default to English so the plugin reads sensibly in a fresh vault. Every
- * one of them is a setting — a vault is free to name these folders in whatever
- * language it is written in.
- */
-export const DEFAULT_SETTINGS: LoreSettings = {
-	language: "auto",
-	universeFile: "Universe.md",
-	registryFile: "System/Types.md",
-	versionsFolder: "Versions",
-	templatesFolder: "Templates",
-	versionSetsFile: "System/Version sets.md",
-	exportFolder: "Exports",
-	showEarthTime: true,
-	minimapPinned: false,
-	minimapMode: "near",
-	timeDensity: 1,
-	timelineLocked: false,
-	setupOffered: false,
-	guideShown: false,
-	guideRead: [],
-	auditHidden: [],
-};
+// Kept here as before for callers; the data lives in settingsData so tests can reach it.
+export { DEFAULT_SETTINGS };
+export type { LoreSettings };
 
 /** A path field's key within `LoreSettings`, and the default it falls back to when cleared. */
 const PATH_FIELDS = [

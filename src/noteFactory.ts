@@ -1,5 +1,7 @@
 import { App, TFile, normalizePath } from "obsidian";
 import type { TypeDefinition } from "./types";
+import { tracksStatus } from "./status";
+import { TIMELINE_FIELD_LINES } from "./setup/defaults";
 
 export interface NoteDraft {
 	type: TypeDefinition;
@@ -53,15 +55,20 @@ export async function buildNoteContent(
 	const templateFrontmatter = match ? match[1] : "";
 	const templateBody = match ? templateContent.slice(match[0].length) : templateContent;
 
+	const tracked = tracksStatus(draft.type.id);
 	const overrides: Record<string, string> = {
 		type: draft.type.id,
 		icon: draft.icon ? `"${draft.icon}"` : "",
 		"icon-type": draft.iconType,
-		status: "draft",
+		...(tracked ? { status: "draft" } : {}),
 		...(draft.extra ?? {}),
 	};
 
-	const lines = templateFrontmatter.length > 0 ? templateFrontmatter.split(/\r?\n/) : [];
+	// A template written before timeline notes stopped carrying a status may
+	// still have the line; it is dropped rather than copied.
+	const lines = (templateFrontmatter.length > 0 ? templateFrontmatter.split(/\r?\n/) : []).filter(
+		(line) => tracked || !/^status:/.test(line),
+	);
 	const seen = new Set<string>();
 
 	const merged = lines.map((line) => {
@@ -78,7 +85,7 @@ export async function buildNoteContent(
 	// A template with no timeline fields still gets them when the type belongs on
 	// a timeline, so placing the note later needs no hand editing.
 	if (draft.type.timeline && !merged.some((line) => line.startsWith("timeline:"))) {
-		merged.push("timeline:", "flow:", "time:", "time-precision: year", "time-label:", "prev: []", "next: []");
+		merged.push(...TIMELINE_FIELD_LINES);
 	}
 
 	const body = draft.body !== undefined ? draft.body : replaceHeading(templateBody, draft.title);

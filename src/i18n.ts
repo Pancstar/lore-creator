@@ -1,7 +1,9 @@
 import { guideEn } from "./guide/strings.en";
 import { guideTr } from "./guide/strings.tr";
 
-export type Language = "auto" | "en" | "tr";
+/** Every interface language choice; settings validation reads this list too. */
+export const LANGUAGES = ["auto", "en", "tr"] as const;
+export type Language = (typeof LANGUAGES)[number];
 
 type Strings = Record<string, string>;
 
@@ -27,16 +29,13 @@ export const en: Strings = {
 	"example.create.where": "New folder \"{0}\" with {1} pages. Nothing outside it changes.",
 	"example.create.missingTypes": "Your type list has no {0}. Those pages are still made, just without a banner.",
 	"example.create.confirm": "Make it",
-	"example.created": "Example story ready. Choose it at the top of the timeline.",
-	"plugin.name": "Lore Creator",
-	"plugin.loaded": "Lore Creator loaded",
+	"example.created": "Example story ready — it is open on the timeline.",
 
 	"view.timeline": "Timeline",
 	"view.laws": "Laws",
 	"view.drafts": "Drafts",
 	"view.dashboard": "Dashboard",
 
-	"settings.title": "Lore Creator",
 	"settings.language": "Language",
 	"settings.language.desc": "Interface language. 'Automatic' follows Obsidian's own language.",
 	"settings.language.auto": "Automatic",
@@ -69,8 +68,6 @@ export const en: Strings = {
 	"command.openDrafts": "Open drafts",
 	"command.openDashboard": "Open dashboard",
 
-	"notice.universeMissing": "Universe file not found: {0}",
-	"notice.saved": "Saved",
 
 	"status.draft": "Draft",
 	"status.partial": "Unfinished",
@@ -151,16 +148,20 @@ export const en: Strings = {
 	"time.editor.rescale.body": "Notes with a day set: {0}. \"Keep their days\" moves each one so it stays on the same day of the new calendar. \"Leave the numbers\" changes nothing in the notes, so their days will shift.",
 	"time.editor.rescale.do": "Keep their days",
 	"time.editor.rescale.keep": "Leave the numbers",
-	"time.editor.rescaled": "Time system saved. Notes that kept their days: {0}.",
+	"time.editor.rescaled": "Time system saved. Notes updated: {0}.",
 	"time.editor.rescaleFailed": "Could not update {0}. Nothing was changed; see the console.",
 	"time.editor.saved": "Time system saved.",
 	"time.editor.saveFailed": "Could not save the time system. Your notes are as they were; see the console.",
 	"time.editor.unrestored": "These notes could not be put back and still use the new day count. Check their dates: {0}",
 	"time.editSystem": "Edit the time system…",
+	"time.editor.earthFirst": "Enter an Earth year first; the matching year and the ratio only count once there is one.",
 	"settings.time.edit": "Edit time system",
 	"settings.time.edit.desc": "Name, days in a unit and the link to Earth time, with a live example.",
 	"setup.time": "Time",
 	"setup.time.desc": "How time works in your world. You can change this any time later.",
+	"setup.time.existing": "Your universe note already holds the time system. Change it with the time system editor.",
+	"setup.existingRegistry": "This vault already has a type registry. Only what is missing is added (its folders, templates, version sets, export folder), in the vault's current language; the language choice applies to a fresh setup.",
+	"setup.indexing": "Obsidian is still reading this vault. Try the setup again in a moment.",
 	"setup.time.earth": "Link to Earth time",
 	"setup.time.earth.desc": "Show an Earth year next to the dates in your world.",
 	"time.error.endBeforeStart": "The end can't be before the start.",
@@ -290,7 +291,6 @@ export const en: Strings = {
 	"nav.mode": "Switch map view",
 	"nav.pickNext": "Which one comes next?",
 	"nav.pickPrev": "Which one came before?",
-	"nav.none": "This note has no connection in that direction.",
 	"command.goNext": "Go to the next fragment",
 	"command.goPrev": "Go to the previous fragment",
 
@@ -326,6 +326,9 @@ export const en: Strings = {
 	"promote.confirm": "Promote",
 	"promote.done": "Promoted to {0}",
 	"promote.failed": "Could not promote the draft — see the console for details.",
+	"promote.noType": "The type {0} no longer exists in the type registry.",
+	"promote.move.title": "Move the draft's text?",
+	"promote.move.body": "The text of {0} moves into the new note {1}. The draft keeps only a pointer to it.",
 	"promote.movedNotice": "This draft's text moved to [[{0}]].",
 	"command.promote": "Promote this draft",
 
@@ -336,6 +339,8 @@ export const en: Strings = {
 	"dashboard.audit.desc":
 		"Advisory only. Nothing here is corrected or blocked — a finding is often just work in progress.",
 	"dashboard.audit.clean": "Nothing to report.",
+	"dashboard.audit.cleanSoFar": "Nothing else to report so far.",
+	"dashboard.audit.indexing": "Obsidian is still reading the vault's links; notes nothing links to are listed once it is done.",
 	"dashboard.audit.hidden": "Switched off: {0}",
 	"dashboard.empty.title": "Nothing here yet",
 	"dashboard.empty.body": "Create a lore note and this fills in with what you have and what is still open.",
@@ -368,6 +373,8 @@ export const en: Strings = {
 	"audit.chip.cycle": "Loop",
 	"audit.chip.overlap": "Overlap",
 	"audit.chip.orphan": "Orphan",
+	"audit.ambiguous-link": "A record names a note that several notes share — it may point at the wrong one",
+	"audit.chip.ambiguous-link": "Ambiguous link",
 
 	"search.title": "Find in the universe",
 	"search.placeholder": "Name…",
@@ -405,6 +412,7 @@ export const en: Strings = {
 	"export.nameRequired": "Give the file a name first.",
 	"export.failed": "The export failed — see the console for details.",
 	"command.export": "Export the universe",
+	"export.defaultName": "Universe",
 
 	"settings.registryFile": "Type registry",
 	"settings.registryFile.desc": "Note whose frontmatter defines the available note types.",
@@ -427,7 +435,6 @@ export const en: Strings = {
 	"setup.offer": "Lore Creator: click here to set up this vault.",
 	"setup.run": "Vault structure",
 	"setup.run.desc": "Create any missing folders, templates and the type registry.",
-	"setup.open": "Set up",
 	"setup.registry.heading": "Types",
 	"setup.registry.body":
 		"This note's frontmatter is read by the plugin. Add an entry to define a new type; the body is yours to document them in.",
@@ -460,16 +467,13 @@ export const tr: Strings = {
 	"example.create.where": "{1} sayfalık yeni \"{0}\" klasörü. Dışındaki hiçbir şey değişmez.",
 	"example.create.missingTypes": "Tür listende {0} yok. O sayfalar yine oluşturulur, yalnız şeritleri olmaz.",
 	"example.create.confirm": "Oluştur",
-	"example.created": "Örnek hikâye hazır. Zaman çizgisinin üstünden onu seç.",
-	"plugin.name": "Lore Creator",
-	"plugin.loaded": "Lore Creator yüklendi",
+	"example.created": "Örnek hikâye hazır, zaman çizgisinde açıldı.",
 
 	"view.timeline": "Zaman Çizgisi",
 	"view.laws": "Yasalar",
 	"view.drafts": "Taslaklar",
 	"view.dashboard": "Pano",
 
-	"settings.title": "Lore Creator",
 	"settings.language": "Dil",
 	"settings.language.desc": "Arayüz dili. 'Otomatik' Obsidian'ın kendi dilini takip eder.",
 	"settings.language.auto": "Otomatik",
@@ -502,8 +506,6 @@ export const tr: Strings = {
 	"command.openDrafts": "Taslakları aç",
 	"command.openDashboard": "Panoyu aç",
 
-	"notice.universeMissing": "Evren dosyası bulunamadı: {0}",
-	"notice.saved": "Kaydedildi",
 
 	"status.draft": "Taslak",
 	"status.partial": "Yarım",
@@ -584,16 +586,20 @@ export const tr: Strings = {
 	"time.editor.rescale.body": "Günü yazılı not sayısı: {0}. \"Günlerini koru\" her notu yeni takvimde de aynı güne taşır. \"Sayıları bırak\" notlara dokunmaz, bu yüzden günleri kayar.",
 	"time.editor.rescale.do": "Günlerini koru",
 	"time.editor.rescale.keep": "Sayıları bırak",
-	"time.editor.rescaled": "Zaman sistemi kaydedildi. Gününü koruyan not sayısı: {0}.",
+	"time.editor.rescaled": "Zaman sistemi kaydedildi. Güncellenen not: {0}.",
 	"time.editor.rescaleFailed": "{0} güncellenemedi. Hiçbir şey değişmedi; ayrıntı konsolda.",
 	"time.editor.saved": "Zaman sistemi kaydedildi.",
 	"time.editor.saveFailed": "Zaman sistemi kaydedilemedi. Notların eskisi gibi; ayrıntı konsolda.",
 	"time.editor.unrestored": "Şu notlar geri alınamadı ve hâlâ yeni gün sayısını kullanıyor. Tarihlerini kontrol et: {0}",
 	"time.editSystem": "Zaman sistemini düzenle…",
+	"time.editor.earthFirst": "Önce bir Dünya yılı gir; evrenindeki karşılığı ve oran ancak o zaman sayılır.",
 	"settings.time.edit": "Zaman sistemini düzenle",
 	"settings.time.edit.desc": "Ad, bir birimdeki gün sayısı ve Dünya zamanıyla bağ; canlı örnekle.",
 	"setup.time": "Zaman",
 	"setup.time.desc": "Evreninde zamanın nasıl işlediği. Bunu sonra istediğin zaman değiştirebilirsin.",
+	"setup.time.existing": "Zaman sistemin evren notunda zaten duruyor. Değiştirmek için zaman sistemi düzenleyicisini kullan.",
+	"setup.existingRegistry": "Bu vault'ta zaten bir tür kaydı var. Yalnız eksik olanlar (klasörleri, şablonları, sürüm setleri, dışa aktarım klasörü) vault'un şimdiki dilinde eklenir; dil seçimi sıfırdan kurulumda geçerlidir.",
+	"setup.indexing": "Obsidian bu vault'u hâlâ okuyor. Kurulumu birazdan yeniden dene.",
 	"setup.time.earth": "Dünya zamanıyla bağla",
 	"setup.time.earth.desc": "Evrenindeki tarihlerin yanında bir Dünya yılı göster.",
 	"time.error.endBeforeStart": "Bitiş başlangıçtan önce olamaz.",
@@ -623,7 +629,7 @@ export const tr: Strings = {
 	"lane.name": "Ad",
 	"lane.name.desc": "Şeridin tuvalde görünen adı. Sadece etiket.",
 	"lane.id": "Kimlik",
-	"lane.id.desc": "Notların gösterdiği değer. Değiştirmek bu şerittteki {0} notu yeniden yazar.",
+	"lane.id.desc": "Notların gösterdiği değer. Değiştirmek bu şeritteki {0} notu yeniden yazar.",
 	"lane.save": "Kaydet",
 	"lane.saved": "Şerit güncellendi",
 	"lane.failed": "Şerit yeniden adlandırılamadı — ayrıntı için konsola bak.",
@@ -722,7 +728,6 @@ export const tr: Strings = {
 	"nav.mode": "Harita görünümünü değiştir",
 	"nav.pickNext": "Sonraki hangisi?",
 	"nav.pickPrev": "Önceki hangisi?",
-	"nav.none": "Bu notun o yönde bağlantısı yok.",
 	"command.goNext": "Sonraki parçaya git",
 	"command.goPrev": "Önceki parçaya git",
 
@@ -758,6 +763,9 @@ export const tr: Strings = {
 	"promote.confirm": "Terfi et",
 	"promote.done": "{0} olarak terfi edildi",
 	"promote.failed": "Taslak terfi edilemedi — ayrıntı için konsola bak.",
+	"promote.noType": "{0} türü artık tür kaydında yok.",
+	"promote.move.title": "Taslağın metni taşınsın mı?",
+	"promote.move.body": "{0} notunun metni yeni nota ({1}) taşınacak. Taslakta yalnız ona giden bir işaret kalacak.",
 	"promote.movedNotice": "Bu taslağın metni [[{0}]] dosyasına taşındı.",
 	"command.promote": "Bu taslağı terfi et",
 
@@ -768,6 +776,8 @@ export const tr: Strings = {
 	"dashboard.audit.desc":
 		"Sadece uyarı. Buradaki hiçbir şey düzeltilmez, hiçbir işlem engellenmez — çoğu zaman zaten devam eden iştir.",
 	"dashboard.audit.clean": "Bildirilecek bir şey yok.",
+	"dashboard.audit.cleanSoFar": "Şimdilik bildirilecek başka bir şey yok.",
+	"dashboard.audit.indexing": "Obsidian vault'taki bağlantıları hâlâ okuyor; hiçbir notun bağlanmadığı notlar okuma bitince listelenir.",
 	"dashboard.audit.hidden": "Kapalı: {0}",
 	"dashboard.empty.title": "Henüz bir şey yok",
 	"dashboard.empty.body": "Bir lore notu oluştur; burası neyin olduğunu ve neyin açık kaldığını gösterir.",
@@ -800,6 +810,8 @@ export const tr: Strings = {
 	"audit.chip.cycle": "Döngü",
 	"audit.chip.overlap": "Çakışma",
 	"audit.chip.orphan": "Sahipsiz",
+	"audit.ambiguous-link": "Bir kayıt, birden çok notun paylaştığı bir adı gösteriyor — yanlış nota gidebilir",
+	"audit.chip.ambiguous-link": "Belirsiz bağlantı",
 
 	"search.title": "Evrende ara",
 	"search.placeholder": "Ad…",
@@ -837,6 +849,7 @@ export const tr: Strings = {
 	"export.nameRequired": "Önce dosyaya bir ad ver.",
 	"export.failed": "Dışa aktarma başarısız oldu — ayrıntı için konsola bak.",
 	"command.export": "Evreni dışa aktar",
+	"export.defaultName": "Evren",
 
 	"settings.registryFile": "Tür kaydı",
 	"settings.registryFile.desc": "Frontmatter'ı kullanılabilir not türlerini tanımlayan not.",
@@ -859,7 +872,6 @@ export const tr: Strings = {
 	"setup.offer": "Lore Creator: vault'u kurmak için buraya tıkla.",
 	"setup.run": "Vault yapısı",
 	"setup.run.desc": "Eksik klasörleri, şablonları ve tür kaydını oluştur.",
-	"setup.open": "Kur",
 	"setup.registry.heading": "Türler",
 	"setup.registry.body":
 		"Bu notun frontmatter'ı eklenti tarafından okunur. Yeni tür tanımlamak için bir girdi ekle; gövde onları açıklaman için senin.",
@@ -894,6 +906,9 @@ export class I18n {
 
 	t(key: string, ...args: string[]): string {
 		const template = this.table[key] ?? en[key] ?? key;
-		return args.reduce((text, arg, i) => text.replace(`{${i}}`, arg), template);
+		// Every {n} is filled, each from the arguments only: a "$&" or a "{0}"
+		// inside a note name stays as written, and a placeholder with no
+		// argument stays put.
+		return template.replace(/\{(\d+)\}/g, (match, index: string) => args[Number(index)] ?? match);
 	}
 }

@@ -189,6 +189,24 @@ export function buildExampleNotes(lang: ExampleLang): ExampleNote[] {
 	];
 }
 
+/**
+ * Folders worth tidying after a removal: those that held a page just removed
+ * and sit inside an example folder, deepest first so a sub-folder goes before
+ * its parent. A folder of the same name that held nothing removed is the
+ * author's and is never listed.
+ */
+export function foldersToTidy(removedPaths: string[], roots: string[]): string[] {
+	const folders = new Set<string>();
+	for (const path of removedPaths) {
+		const parts = path.split("/").slice(0, -1);
+		for (let depth = parts.length; depth > 0; depth--) {
+			const folder = parts.slice(0, depth).join("/");
+			if (roots.some((root) => folder === root || folder.startsWith(`${root}/`))) folders.add(folder);
+		}
+	}
+	return [...folders].sort((a, b) => b.split("/").length - a.split("/").length || a.localeCompare(b));
+}
+
 /** Every basename the example writes, in both languages. */
 const EXAMPLE_BASENAMES = new Set(
 	(["en", "tr"] as ExampleLang[]).flatMap((lang) =>

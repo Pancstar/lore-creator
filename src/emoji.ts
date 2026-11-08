@@ -1,3 +1,4 @@
+import { textMatcher } from "./timeline/interaction";
 /**
  * A curated emoji set aimed at worldbuilding rather than the full Unicode
  * catalogue, which would add well over a hundred kilobytes for symbols nobody
@@ -270,12 +271,8 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
 const ALL_ENTRIES: EmojiEntry[] = EMOJI_CATEGORIES.flatMap((category) => category.entries);
 
 export function searchEmoji(query: string): EmojiEntry[] {
-	const needle = query.trim().toLowerCase();
-	if (!needle) return ALL_ENTRIES;
-	return ALL_ENTRIES.filter(
-		(entry) =>
-			entry.char === needle ||
-			entry.en.includes(needle) ||
-			entry.tr.includes(needle),
-	);
+	const raw = query.trim();
+	if (!raw) return ALL_ENTRIES;
+	const matches = textMatcher(raw);
+	return ALL_ENTRIES.filter((entry) => entry.char === raw || matches(`${entry.en} ${entry.tr}`));
 }

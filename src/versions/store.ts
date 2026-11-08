@@ -1,5 +1,5 @@
 import { App, TFile, normalizePath } from "obsidian";
-import { linkTarget } from "../links";
+import { linkTarget, linkTo } from "../links";
 import { asString } from "../frontmatter";
 import { loreFiles } from "../scope";
 
@@ -156,7 +156,7 @@ export class VersionStore {
 
 		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${previous.number}`;
-			frontmatter["version-of"] = `[[${active.basename}]]`;
+			frontmatter["version-of"] = linkTo(this.app, active, archive.path);
 			if (previous.name) frontmatter["version-name"] = previous.name;
 			if (previous.note) frontmatter["version-note"] = previous.note;
 		});
@@ -203,7 +203,7 @@ export class VersionStore {
 		const archive = await this.app.vault.create(archivePath, activeContent);
 		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${activeInfo.number}`;
-			frontmatter["version-of"] = `[[${active.basename}]]`;
+			frontmatter["version-of"] = linkTo(this.app, active, archive.path);
 		});
 
 		await this.app.vault.process(active, () => targetContent);

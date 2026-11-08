@@ -2,6 +2,9 @@ import { App, Modal, Notice, Setting, TFile, normalizePath } from "obsidian";
 import type LorePlugin from "../main";
 import { buildNoteContent, ensureFolder, extractBody, sanitiseFileName } from "../noteFactory";
 import { enterSubmits } from "./enterSubmits";
+import { linkTo } from "../links";
+import { ConfirmModal } from "./confirm";
+import type { TypeDefinition } from "../types";
 
 type BodyMode = "keep" | "move";
 
@@ -15,6 +18,8 @@ export class PromoteModal extends Modal {
 	private title: string;
 	private folder: string;
 	private bodyMode: BodyMode = "keep";
+	/** Set while a promotion runs, so a second click cannot start another. */
+	private busy = false;
 	private folderInput: HTMLInputElement | null = null;
 
 	constructor(
@@ -106,7 +111,11 @@ export class PromoteModal extends Modal {
 		const type = this.plugin.types.byId(this.typeId);
 		const title = sanitiseFileName(this.title);
 
-		if (!type) return;
+		if (!type) {
+			// The type was removed from the registry while the dialog was open.
+			new Notice(t("promote.noType", this.typeId || "—"));
+			return;
+		}
 		if (!title) {
 			new Notice(t("new.nameRequired"));
 			return;
@@ -118,30 +127,60 @@ export class PromoteModal extends Modal {
 			return;
 		}
 
+		if (this.bodyMode === "move") {
+			// Moving empties the draft's text, so it is spelled out and confirmed first.
+			new ConfirmModal(
+				this.app,
+				{
+					title: t("promote.move.title"),
+					body: t("promote.move.body", this.draft.basename, path),
+					confirmLabel: t("promote.confirm"),
+					cancelLabel: t("common.cancel"),
+					destructive: true,
+				},
+				() => void this.promote(type, title, path),
+			).open();
+			return;
+		}
+		await this.promote(type, title, path);
+	}
+
+	private async promote(type: TypeDefinition, title: string, path: string) {
+		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		// One promotion per dialog: a second click would only fail on the
+		// note the first one just created.
+		if (this.busy) return;
+		this.busy = true;
+		const folder = this.folder;
+		const move = this.bodyMode === "move";
 		try {
 			const draftContent = await this.app.vault.read(this.draft);
 			const draftFrontmatter = this.app.metadataCache.getFileCache(this.draft)?.frontmatter;
 			const icon = typeof draftFrontmatter?.icon === "string" ? draftFrontmatter.icon : "";
 			const iconType = draftFrontmatter?.["icon-type"] === "lucide" ? "lucide" : "emoji";
 
-			await ensureFolder(this.app, this.folder);
+			await ensureFolder(this.app, folder);
 			const content = await buildNoteContent(this.app, this.plugin.settings.templatesFolder, {
 				type,
 				title,
 				icon: icon || type.icon,
 				iconType,
 				body: extractBody(draftContent),
-				extra: { "promoted-from": `"[[${this.draft.basename}]]"` },
 			});
 
 			const created = await this.app.vault.create(path, content);
 
+			// Both links are written once both notes exist: the new note usually
+			// shares the draft's name, and only then can Obsidian tell them apart.
+			await this.app.fileManager.processFrontMatter(created, (frontmatter: Record<string, unknown>) => {
+				frontmatter["promoted-from"] = linkTo(this.app, this.draft, created.path);
+			});
 			await this.app.fileManager.processFrontMatter(this.draft, (frontmatter: Record<string, unknown>) => {
-				frontmatter["promoted-to"] = `[[${title}]]`;
+				frontmatter["promoted-to"] = linkTo(this.app, created, this.draft.path);
 			});
 
-			if (this.bodyMode === "move") {
-				await this.emptyDraft(title);
+			if (move) {
+				await this.emptyDraft(linkTo(this.app, created, this.draft.path).slice(2, -2));
 			}
 
 			await this.app.workspace.getLeaf(false).openFile(created);
@@ -150,12 +189,14 @@ export class PromoteModal extends Modal {
 		} catch (error) {
 			console.error("Lore Creator: could not promote draft", error);
 			new Notice(t("promote.failed"));
+		} finally {
+			this.busy = false;
 		}
 	}
 
 	/** Leaves the draft in place with a pointer, rather than removing the note. */
-	private async emptyDraft(title: string) {
-		const notice = this.plugin.i18n.t("promote.movedNotice", title);
+	private async emptyDraft(linkText: string) {
+		const notice = this.plugin.i18n.t("promote.movedNotice", linkText);
 
 		await this.app.vault.process(this.draft, (current) => {
 			const match = current.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);

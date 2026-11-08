@@ -21,16 +21,9 @@ export class Navigator {
 		this.minimap = new Minimap(this.plugin);
 	}
 
-	refreshAll() {
-		this.syncStatusBarOffset();
-		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
-			const view = leaf.view;
-			if (view instanceof MarkdownView) this.render(view);
-		}
-	}
-
 	removeAll() {
 		document.body.style.removeProperty(STATUS_BAR_OFFSET);
+		this.statusBarHeight = null;
 		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view;
 			if (view instanceof MarkdownView) this.remove(view);
@@ -42,9 +35,14 @@ export class Navigator {
 	 * width changes as the word count ticks up, so the bar is lifted clear of it
 	 * by its height rather than given a right margin that would never stay right.
 	 */
+	private statusBarHeight: number | null = null;
+
 	syncStatusBarOffset() {
 		const statusBar = document.body.querySelector<HTMLElement>(".status-bar");
 		const height = statusBar ? Math.round(statusBar.getBoundingClientRect().height) : 0;
+		// Called on every focus change; the style is only written when it moved.
+		if (height === this.statusBarHeight) return;
+		this.statusBarHeight = height;
 		document.body.style.setProperty(STATUS_BAR_OFFSET, `${height}px`);
 	}
 
@@ -181,7 +179,7 @@ export class Navigator {
 		modeButton.addEventListener("click", () => {
 			const next: MinimapMode = this.plugin.settings.minimapMode === "wide" ? "near" : "wide";
 			this.plugin.settings.minimapMode = next;
-			void this.plugin.saveSettings();
+			this.saveMapSetting();
 		});
 
 		const pinButton = actionsEl.createEl("button", {
@@ -191,11 +189,20 @@ export class Navigator {
 		setIcon(pinButton, this.plugin.settings.minimapPinned ? "pin" : "pin-off");
 		pinButton.addEventListener("click", () => {
 			this.plugin.settings.minimapPinned = !this.plugin.settings.minimapPinned;
-			void this.plugin.saveSettings();
+			this.saveMapSetting();
 		});
 
 		mapEl.toggleClass("is-pinned", this.plugin.settings.minimapPinned);
 		void file;
+	}
+
+	/**
+	 * A map preference touches only the bars under the notes: saved as is and
+	 * redrawn there, without dropping caches or repainting every view.
+	 */
+	private saveMapSetting() {
+		void this.plugin.saveData(this.plugin.settings);
+		this.plugin.decorateNotes();
 	}
 
 	private syncMap(mapEl: HTMLElement, file: TFile, highlight: TFile | null) {

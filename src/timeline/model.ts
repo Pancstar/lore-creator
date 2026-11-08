@@ -135,6 +135,22 @@ export class TimelineModel {
 		return target;
 	}
 
+	/**
+	 * Archived versions still filed under a lane. They are not drawn, but a lane
+	 * rename must carry them too, or switching back to one would land the note
+	 * in a lane that no longer exists.
+	 */
+	archivesInLane(timelineId: string, flow: string): TFile[] {
+		return loreFiles(this.app).filter((file) => {
+			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+			return (
+				Boolean(frontmatter?.["version-of"]) &&
+				asString(frontmatter?.timeline).trim() === timelineId &&
+				asString(frontmatter?.flow).trim() === flow
+			);
+		});
+	}
+
 	/** Every timeline id referenced by a note, including ones with no definition note. */
 	referencedTimelineIds(): string[] {
 		return [...this.snapshot().referenced];
@@ -261,20 +277,5 @@ export class TimelineModel {
 
 	private resolve(linkpath: string, sourcePath: string): string | null {
 		return this.app.metadataCache.getFirstLinkpathDest(linkpath, sourcePath)?.path ?? null;
-	}
-
-	/** Connections pointing at notes outside this timeline, reported not fixed. */
-	danglingLinks(timelineId: string): { node: TimelineNode; link: string }[] {
-		const nodes = this.graph(timelineId).nodes;
-		const paths = new Set(nodes.map((node) => node.path));
-		const dangling: { node: TimelineNode; link: string }[] = [];
-
-		for (const node of nodes) {
-			for (const link of [...node.next, ...node.prev]) {
-				const target = this.resolve(link, node.path);
-				if (!target || !paths.has(target)) dangling.push({ node, link });
-			}
-		}
-		return dangling;
 	}
 }

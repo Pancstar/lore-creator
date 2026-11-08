@@ -61,6 +61,11 @@ export function makeApp(notes: Record<string, Frontmatter>, body: Record<string,
 		metadataCache: {
 			getFileCache: (file: TFile) => ({ frontmatter: notes[file.path] }),
 			getFirstLinkpathDest: (link: string, _source: string) => resolve(link),
+			// Shortest text that names only this file: the name, or the path when shared.
+			fileToLinktext: (file: TFile, _source: string, _omitMd?: boolean) => {
+				const shared = [...files.values()].filter((other) => other.basename === file.basename).length > 1;
+				return shared ? file.path.replace(/\.md$/, "") : file.basename;
+			},
 			resolvedLinks,
 		},
 	} as unknown as App;

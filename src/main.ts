@@ -1,7 +1,8 @@
-import { Notice, Plugin, TAbstractFile, TFile, WorkspaceLeaf, debounce, getLanguage, normalizePath } from "obsidian";
+import { MarkdownView, Notice, Plugin, TAbstractFile, TFile, WorkspaceLeaf, debounce, getLanguage, normalizePath } from "obsidian";
 import { SetupModal } from "./setup/wizard";
-import { DEFAULT_SETTINGS, LoreSettingTab, LoreSettings } from "./settings";
+import { LoreSettingTab } from "./settings";
 import { I18n } from "./i18n";
+import { DEFAULT_SETTINGS, LoreSettings, sanitizeSettings } from "./settingsData";
 import { Universe } from "./universe";
 import { TypeRegistry } from "./types";
 import { Banner } from "./banner";
@@ -20,6 +21,7 @@ import {
 	LawsView,
 	TimelineView,
 	VIEW_DEFINITIONS,
+	VIEW_TYPE_DASHBOARD,
 	VIEW_TYPE_GUIDE,
 	VIEW_TYPE_TIMELINE,
 } from "./views";
@@ -61,7 +63,7 @@ export default class LorePlugin extends Plugin {
 		this.universe = new Universe(this.app, this.settings.universeFile);
 		this.types = new TypeRegistry(this.app, this.registryPath);
 		this.versions = new VersionStore(this.app, this.settings.versionsFolder);
-		this.versionSets = new VersionSetStore(this.app, this.versions, this.settings.versionSetsFile);
+		this.versionSets = new VersionSetStore(this.app, this.versions, this.settings.versionSetsFile, () => this.language);
 		this.banner = new Banner(this);
 		this.navigator = new Navigator(this);
 		this.applyLanguage();
@@ -170,13 +172,26 @@ export default class LorePlugin extends Plugin {
 
 		this.addSettingTab(new LoreSettingTab(this.app, this));
 
-		this.registerEvent(this.app.workspace.on("file-open", () => this.decorateNotes()));
-		this.registerEvent(this.app.workspace.on("layout-change", () => this.decorateNotes()));
+		// Opening a file redraws that note; a pane coming into view draws any
+		// note that went stale while it was hidden.
+		this.registerEvent(this.app.workspace.on("file-open", () => this.decorateUnseen()));
+		this.registerEvent(this.app.workspace.on("layout-change", () => this.decorateUnseen()));
+		this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.decorateUnseen()));
 		this.registerEvent(
-			this.app.workspace.on("resize", () => this.navigator.syncStatusBarOffset()),
+			this.app.workspace.on("resize", () => this.decorateUnseen()),
 		);
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => this.onMetadataChanged(file)),
+		);
+		// A report opened before Obsidian finished reading links skipped the
+		// orphan check; it is redrawn once, when the index is complete.
+		this.registerEvent(
+			this.app.metadataCache.on("resolved", () => {
+				this.linksResolved = true;
+				for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD)) {
+					if (leaf.view instanceof DashboardView && leaf.view.waitingForIndex) leaf.view.render();
+				}
+			}),
 		);
 		// Deleted and renamed notes must leave the views even when no other note's
 		// metadata changes alongside them.
@@ -252,11 +267,52 @@ export default class LorePlugin extends Plugin {
 		void this.saveData(this.settings);
 	}
 
-	/** Draws the banner and the navigation bar into every open markdown view. */
-	private decorateNotes() {
-		this.banner.refreshAll();
-		this.navigator.refreshAll();
+	/**
+	 * Notes whose banner and navigation bar match the vault as it is now. A
+	 * change redraws only the notes on screen; the rest drop out of this map and
+	 * are drawn when they are shown, so many open tabs cost nothing while typing.
+	 */
+	private freshViews = new WeakMap<MarkdownView, string>();
+
+	/** Set by the first "resolved" event: Obsidian has read every note's links once. */
+	linksResolved = false;
+
+	private markdownViews(): MarkdownView[] {
+		return this.app.workspace
+			.getLeavesOfType("markdown")
+			.map((leaf) => leaf.view)
+			.filter((view): view is MarkdownView => view instanceof MarkdownView);
 	}
+
+	private decorateView(view: MarkdownView) {
+		this.banner.render(view);
+		this.navigator.render(view);
+		this.freshViews.set(view, view.file?.path ?? "");
+	}
+
+	/** Redraws the notes on screen; hidden ones are marked to be drawn when shown. */
+	decorateNotes() {
+		this.navigator.syncStatusBarOffset();
+		// Read every view's visibility first, then draw: checking after each draw
+		// would force a layout per note.
+		const views = this.markdownViews().map((view) => ({ view, shown: view.containerEl.isShown() }));
+		for (const { view, shown } of views) {
+			if (shown) this.decorateView(view);
+			else this.freshViews.delete(view);
+		}
+	}
+
+	/** Draws notes on screen that missed a redraw while hidden, or are new. */
+	private decorateUnseen() {
+		this.navigator.syncStatusBarOffset();
+		for (const view of this.markdownViews()) {
+			// New, stale, or now showing a different file.
+			const drawn = this.freshViews.get(view);
+			if (drawn !== (view.file?.path ?? "") && view.containerEl.isShown()) this.decorateView(view);
+		}
+	}
+
+
 
 	private onMetadataChanged(file: TFile) {
 		if (this.types.isRegistryFile(file)) this.types.invalidate();
@@ -287,8 +343,7 @@ export default class LorePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const stored = (await this.loadData()) as Partial<LoreSettings> | null;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, stored);
+		this.settings = sanitizeSettings<LoreSettings>(await this.loadData(), DEFAULT_SETTINGS);
 	}
 
 	async saveSettings() {

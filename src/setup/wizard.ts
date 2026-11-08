@@ -1,11 +1,15 @@
 import { App, Modal, Notice, Setting, normalizePath } from "obsidian";
 import type LorePlugin from "../main";
+import type { TypeDefinition } from "../types";
 import { ensureFolder } from "../noteFactory";
 import { DEFAULT_TIME, Time } from "../universe";
 import { validateTime } from "../time";
+import { openTimeSystemEditor } from "../modals/timeSystem";
+import { keepExistingPaths } from "../settingsData";
 import {
 	FOLDER_NAMES,
 	buildRegistryNote,
+	buildVersionSetsNote,
 	buildTemplate,
 	buildUniverseNote,
 	resolveTypes,
@@ -28,6 +32,8 @@ export class SetupModal extends Modal {
 	private timeTexts = { days: "365", earthYear: "", epoch: "0", ratio: "1" };
 	private timeErrorEl: HTMLElement | null = null;
 	private earthEl: HTMLElement | null = null;
+	/** An existing universe note is the author's: its time system is edited elsewhere. */
+	private universeExists = false;
 
 	constructor(
 		app: App,
@@ -41,14 +47,18 @@ export class SetupModal extends Modal {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("setup.title"));
 		this.contentEl.createEl("p", { cls: "setting-item-description", text: t("setup.desc") });
+		this.universeExists = this.app.vault.getFileByPath(normalizePath(this.plugin.settings.universeFile)) !== null;
 
-		new Setting(this.contentEl)
-			.setName(t("setup.universeName"))
-			.addText((text) =>
-				text.setPlaceholder(t("setup.universeNamePlaceholder")).onChange((value) => {
-					this.universeName = value;
-				}),
-			);
+		// An existing universe note keeps its name; asking for one would be ignored.
+		if (!this.universeExists) {
+			new Setting(this.contentEl)
+				.setName(t("setup.universeName"))
+				.addText((text) =>
+					text.setPlaceholder(t("setup.universeNamePlaceholder")).onChange((value) => {
+						this.universeName = value;
+					}),
+				);
+		}
 
 		new Setting(this.contentEl)
 			.setName(t("setup.fileLanguage"))
@@ -94,20 +104,76 @@ export class SetupModal extends Modal {
 		if (!this.previewEl) return;
 
 		const folders = FOLDER_NAMES[this.lang];
-		const types = resolveTypes(this.lang, this.prefixFolders);
+		const existing = this.existingRegistryTypes();
+		const types = existing ?? resolveTypes(this.lang, this.prefixFolders);
 		const lines = [
+			...(existing ? [this.plugin.i18n.t("setup.existingRegistry"), ""] : []),
 			`${this.plugin.settings.universeFile}`,
-			...types.map((type) => `${type.folder}/`),
-			`${folders.versions}/`,
-			`${folders.templates}/`,
-			`${folders.system}/`,
+			...types.filter((type) => type.folder).map((type) => `${type.folder}/`),
+			...(existing
+				? [
+						`${this.plugin.settings.versionsFolder}/`,
+						`${this.plugin.settings.templatesFolder}/`,
+						this.plugin.settings.versionSetsFile,
+						`${this.plugin.settings.exportFolder}/`,
+					]
+				: [
+						`${folders.versions}/`,
+						`${folders.templates}/`,
+						`${folders.system}/`,
+						this.paths().versionSetsFile,
+						`${folders.exports}/`,
+					]),
 		];
 		this.previewEl.setText(lines.join("\n"));
+	}
+
+	/**
+	 * The types of a registry that is already in use, or null for a fresh
+	 * setup. A re-run completes that registry's own folders and templates
+	 * instead of laying a second set down in another language.
+	 */
+	private existingRegistryTypes(): TypeDefinition[] | null {
+		const file = this.plugin.types.file;
+		const raw: unknown = file ? this.app.metadataCache.getFileCache(file)?.frontmatter?.registry : undefined;
+		if (!Array.isArray(raw) || raw.length === 0) return null;
+		return this.plugin.types.creatable();
+	}
+
+	/**
+	 * A registry file that exists but is not indexed yet cannot be read; taking
+	 * it for a fresh vault would lay down a second set of folders beside it.
+	 */
+	private registryNotReady(): boolean {
+		const file = this.plugin.types.file;
+		return file !== null && !this.app.metadataCache.getFileCache(file);
+	}
+
+	/** Where the system files go for the chosen language; nothing is written here. */
+	private paths() {
+		const folders = FOLDER_NAMES[this.lang];
+		return {
+			registryFile: `${folders.system}/${this.lang === "tr" ? "Türler" : "Types"}.md`,
+			versionSetsFile: `${folders.system}/${this.lang === "tr" ? "Sürüm setleri" : "Version sets"}.md`,
+		};
 	}
 
 	/** Optional: skipping it all leaves an Earth-like 365-day calendar. */
 	private buildTimeStep() {
 		const t = (key: string) => this.plugin.i18n.t(key);
+
+		if (this.universeExists) {
+			// Answers typed here would go nowhere: the universe note already holds
+			// the time system, and it is the author's to change.
+			new Setting(this.contentEl)
+				.setName(t("setup.time"))
+				.setDesc(t("setup.time.existing"))
+				.setHeading()
+				.addButton((button) =>
+					button.setButtonText(t("time.editSystem")).onClick(() => openTimeSystemEditor(this.plugin)),
+				);
+			return;
+		}
 
 		new Setting(this.contentEl).setName(t("setup.time")).setDesc(t("setup.time.desc")).setHeading();
 
@@ -171,47 +237,79 @@ export class SetupModal extends Modal {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		const name = this.universeName.trim() || t("setup.untitled");
 
-		const time = this.readTimeStep();
+		// With a universe note already there, the time step was never shown and
+		// the note is not rewritten, so there is nothing to read.
+		const time = this.universeExists ? DEFAULT_TIME : this.readTimeStep();
 		if (!time) return;
+
+		if (this.registryNotReady()) {
+			new Notice(t("setup.indexing"));
+			return;
+		}
 
 		try {
 			const folders = FOLDER_NAMES[this.lang];
-			const types = resolveTypes(this.lang, this.prefixFolders);
+			// A registry already in use decides the folders and templates; the
+			// language choice only shapes a fresh setup.
+			const existing = this.existingRegistryTypes();
+			const types = existing ?? resolveTypes(this.lang, this.prefixFolders);
+			const settings = this.plugin.settings;
+			// Missing pieces of an existing setup follow the vault's current
+			// language, not the one picked for a fresh setup.
+			const lang = existing ? this.plugin.language : this.lang;
+			// On a re-run, paths that still lead somewhere are the author's working
+			// setup: their registry, sets and templates stay in use. Only paths
+			// pointing at nothing take the new names.
+			const exists = (path: string) => this.app.vault.getAbstractFileByPath(normalizePath(path)) !== null;
+			const current = {
+				registryFile: settings.registryFile,
+				versionSetsFile: settings.versionSetsFile,
+				versionsFolder: settings.versionsFolder,
+				templatesFolder: settings.templatesFolder,
+				exportFolder: settings.exportFolder,
+			};
+			const target = keepExistingPaths(
+				current,
+				// With a registry in use, missing pieces are filled in where the
+				// settings already point; new names are only for a fresh setup.
+				existing
+					? { ...current }
+					: {
+							...this.paths(),
+							versionsFolder: folders.versions,
+							templatesFolder: folders.templates,
+							exportFolder: folders.exports,
+						},
+				exists,
+			);
 
-			// Settings are pointed at the new names first so everything created
-			// below lands where the plugin will look for it afterwards.
-			this.plugin.settings.registryFile = `${folders.system}/${this.lang === "tr" ? "Türler" : "Types"}.md`;
-			this.plugin.settings.versionSetsFile = `${folders.system}/${
-				this.lang === "tr" ? "Sürüm setleri" : "Version sets"
-			}.md`;
-			this.plugin.settings.versionsFolder = folders.versions;
-			this.plugin.settings.templatesFolder = folders.templates;
-			this.plugin.settings.exportFolder = folders.exports;
-			this.plugin.settings.setupOffered = true;
-			await this.plugin.saveSettings();
-
-			for (const type of types) await ensureFolder(this.app, type.folder);
-			await ensureFolder(this.app, folders.versions);
-			await ensureFolder(this.app, folders.templates);
-			await ensureFolder(this.app, folders.system);
+			// Everything is written to explicit paths first. Settings only move to
+			// the new names once all of it exists, so a failure partway leaves the
+			// plugin pointing where it pointed before, not at missing files.
+			for (const type of types) if (type.folder) await ensureFolder(this.app, type.folder);
+			await ensureFolder(this.app, target.versionsFolder);
+			await ensureFolder(this.app, target.templatesFolder);
+			await ensureFolder(this.app, target.exportFolder);
 
 			let created = 0;
 			created += await this.write(
 				this.plugin.settings.universeFile,
 				buildUniverseNote(name, this.plugin.i18n, time),
 			);
-			created += await this.write(
-				this.plugin.settings.registryFile,
-				buildRegistryNote(types, this.plugin.i18n),
-			);
+			if (!existing) created += await this.write(target.registryFile, buildRegistryNote(types, this.plugin.i18n));
+			created += await this.write(target.versionSetsFile, buildVersionSetsNote(lang));
 
 			for (const type of types) {
 				if (!type.template) continue;
 				created += await this.write(
-					`${folders.templates}/${type.template}.md`,
-					buildTemplate(type, this.lang),
+					`${target.templatesFolder}/${type.template}.md`,
+					buildTemplate(type, lang),
 				);
 			}
+
+			Object.assign(settings, target);
+			settings.setupOffered = true;
+			await this.plugin.saveSettings();
 
 			this.plugin.types.invalidate();
 			new Notice(t("setup.done", String(created)));

@@ -1,6 +1,7 @@
 import type { FieldDefinition, TypeDefinition } from "../types";
 import type { I18n } from "../i18n";
 import { DEFAULT_TIME, Time } from "../universe";
+import { tracksStatus } from "../status";
 
 type Lang = "tr" | "en";
 
@@ -274,8 +275,32 @@ export function resolveTypes(lang: Lang, prefixFolders: boolean): TypeDefinition
 	});
 }
 
-function yamlValue(value: string): string {
-	return /[:#{}[\],&*?|<>=!%@`"']/.test(value) ? JSON.stringify(value) : value;
+/**
+ * Always a double-quoted scalar. Picking out "dangerous" characters missed the
+ * values YAML turns into something else — `yes`, `null`, `123`, a leading
+ * dash or space — and a JSON string is valid YAML for every text.
+ */
+export function yamlValue(value: string): string {
+	return JSON.stringify(value);
+}
+
+/** The version sets note the setup creates, so the sets dialog has a home from the start. */
+export function buildVersionSetsNote(lang: Lang): string {
+	const body =
+		lang === "tr"
+			? [
+					"# Sürüm Setleri",
+					"",
+					"> Bu dosyanın frontmatter'ı eklenti tarafından yönetilir.",
+					"> Her set, hangi notun hangi sürümünün aktif olacağını kaydeder.",
+				]
+			: [
+					"# Version Sets",
+					"",
+					"> The plugin manages this file's frontmatter.",
+					"> Each set records which version of each note is active.",
+				];
+	return ["---", "type: system", 'icon: "🧷"', "sets: []", "---", "", ...body, ""].join("\n");
 }
 
 /** Serialises the registry into the frontmatter the plugin reads back. */
@@ -314,17 +339,30 @@ export function buildRegistryNote(types: TypeDefinition[], i18n: I18n): string {
 }
 
 /**
+ * The timeline fields a note of a timeline type starts with, empty. Templates
+ * and notes made without a template share this one list, so both offer the
+ * same fields to fill in.
+ */
+export const TIMELINE_FIELD_LINES: readonly string[] = [
+	"timeline:",
+	"flow:",
+	"time:",
+	"time-precision: year",
+	"time-label:",
+	"time-end:",
+	"time-uncertain: false",
+	"earth-time:",
+	"prev: []",
+	"next: []",
+];
+
+/**
  * Templates are derived from the type definition rather than hand-maintained,
  * so a type and its template cannot describe different fields.
  */
 export function buildTemplate(type: TypeDefinition, lang: Lang): string {
-	const lines: string[] = [
-		"---",
-		`type: ${type.id}`,
-		`icon: "${type.icon}"`,
-		"icon-type: emoji",
-		"status: draft",
-	];
+	const lines: string[] = ["---", `type: ${type.id}`, `icon: "${type.icon}"`, "icon-type: emoji"];
+	if (tracksStatus(type.id)) lines.push("status: draft");
 
 	if (type.id === "character") lines.push("aliases: []");
 
@@ -334,19 +372,7 @@ export function buildTemplate(type: TypeDefinition, lang: Lang): string {
 	}
 
 	if (type.timeline) {
-		lines.push(
-			"version: v1",
-			"timeline:",
-			"flow:",
-			"time:",
-			"time-precision: year",
-			"time-label:",
-			"time-end:",
-			"time-uncertain: false",
-			"earth-time:",
-			"prev: []",
-			"next: []",
-		);
+		lines.push("version: v1", ...TIMELINE_FIELD_LINES);
 	}
 
 	if (type.id !== "law" && type.id !== "timeline") lines.push("related: []");

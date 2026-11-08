@@ -276,3 +276,190 @@ describe("audit: review fixes", () => {
 		for (const name of ["A", "B", "C", "D"]) expect(cycles[0].detail).toContain(name);
 	});
 });
+
+describe("audit: ambiguous records", () => {
+	const SETS = "System/Version sets.md";
+	const runWith = (notes: Record<string, Frontmatter>) => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), ...notes });
+		return new Audit(app, new TypeRegistry(app, REGISTRY), SETS).run();
+	};
+
+	it("flags an archive whose version-of names a note several notes share", () => {
+		const issues = runWith({
+			"Act 1/Scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			"Versions/Scene — v1.md": { type: "event", "version-of": "[[Scene]]" },
+		});
+		expect(find(issues, "ambiguous-link").map((issue) => [issue.file.path, issue.detail])).toEqual([
+			["Versions/Scene — v1.md", "Scene"],
+		]);
+	});
+
+	it("is quiet for a unique name or a path link", () => {
+		const issues = runWith({
+			"Act 1/Scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			"Act 1/Solo.md": { type: "event" },
+			"Versions/Scene — v1.md": { type: "event", "version-of": "[[Act 1/Scene]]" },
+			"Versions/Solo — v1.md": { type: "event", "version-of": "[[Solo]]" },
+		});
+		expect(find(issues, "ambiguous-link")).toEqual([]);
+	});
+
+	it("flags a version set entry that names a shared note", () => {
+		const issues = runWith({
+			"Act 1/Scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			[SETS]: { type: "system", sets: [{ id: "a", name: "A", entries: [{ note: "Scene", version: "v2" }] }] },
+		});
+		expect(find(issues, "ambiguous-link", SETS).map((issue) => issue.detail)).toEqual(["Scene"]);
+	});
+});
+
+describe("audit: ambiguous records (review fixes)", () => {
+	const runWith = (notes: Record<string, Frontmatter>) => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), ...notes });
+		return new Audit(app, new TypeRegistry(app, REGISTRY), "/System/Version sets.md/").run();
+	};
+
+	it("does not flag a link that names a root-level note exactly", () => {
+		const issues = runWith({
+			"Scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			"Versions/Scene — v1.md": { type: "event", "version-of": "[[Scene]]" },
+		});
+		expect(find(issues, "ambiguous-link")).toEqual([]);
+	});
+
+	it("counts names without regard to case", () => {
+		const issues = runWith({
+			"Act 1/scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			"Versions/Scene — v1.md": { type: "event", "version-of": "[[Scene]]" },
+		});
+		expect(find(issues, "ambiguous-link")).toHaveLength(1);
+	});
+
+	it("finds the sets note even when its path setting has stray slashes", () => {
+		const issues = runWith({
+			"Act 1/Scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			"System/Version sets.md": { type: "system", sets: [{ id: "a", entries: [{ note: "Scene", version: "v1" }] }] },
+		});
+		expect(find(issues, "ambiguous-link", "System/Version sets.md")).toHaveLength(1);
+	});
+});
+
+describe("audit: law targets (v0.9.1)", () => {
+	it("calls a note without frontmatter, named as a law, not a law", () => {
+		const issues = run({ "Kai.md": { type: "character", laws: "[[Plain]]" }, "Plain.md": undefined as unknown as Frontmatter });
+		expect(find(issues, "law-not-law", "Kai.md").map((issue) => issue.detail)).toEqual(["Plain"]);
+	});
+
+	it("reports the same wrong target once per field", () => {
+		const issues = run({
+			"Mira.md": { type: "character" },
+			"Kai.md": { type: "character", "breaks-law": ["[[Mira]]", "[[Mira]]"] },
+		});
+		expect(find(issues, "law-not-law", "Kai.md")).toHaveLength(1);
+	});
+});
+
+describe("audit: law target in templates (v0.9.1)", () => {
+	it("calls a template, named as a law, not a law", async () => {
+		const { setTemplatesFolder } = await import("../src/scope");
+		setTemplatesFolder("Templates");
+		try {
+			const issues = run({ "Kai.md": { type: "character", laws: "[[Law tpl]]" }, "Templates/Law tpl.md": { type: "law" } });
+			expect(find(issues, "law-not-law", "Kai.md").map((issue) => issue.detail)).toEqual(["Law tpl"]);
+		} finally {
+			setTemplatesFolder("");
+		}
+	});
+});
+
+describe("audit: waits for the link index (v0.9.3)", () => {
+	it("skips orphans and says so while some notes are not indexed yet", () => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), "Kai.md": { type: "character" } });
+		delete (app.metadataCache.resolvedLinks as Record<string, unknown>)["Kai.md"];
+		const audit = new Audit(app, new TypeRegistry(app, REGISTRY));
+		expect(find(audit.run(), "orphan")).toEqual([]);
+		expect(audit.indexing).toBe(true);
+	});
+
+	it("checks orphans once every note is indexed", () => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), "Kai.md": { type: "character" } });
+		const audit = new Audit(app, new TypeRegistry(app, REGISTRY));
+		expect(find(audit.run(), "orphan")).toHaveLength(1);
+		expect(audit.indexing).toBe(false);
+	});
+});
+
+describe("audit: resolves each link once (v0.9.3)", () => {
+	it("asks Obsidian at most once per note and link", () => {
+		TimelineModel.invalidate();
+		const notes: Record<string, Frontmatter> = { [REGISTRY]: registryNote(), "Timeline.md": TIMELINE, "Law.md": { type: "law" } };
+		for (let i = 0; i < 50; i++) {
+			notes[`N${i}.md`] = {
+				type: "event",
+				timeline: "main",
+				flow: "kai",
+				time: i,
+				next: `[[N${i + 1}]]`,
+				prev: i ? `[[N${i - 1}]]` : [],
+				related: `[[N${(i * 7) % 50}]]`,
+				"breaks-law": "[[Law]]",
+			};
+		}
+		const { app } = makeApp(notes);
+		const cache = app.metadataCache as unknown as { getFirstLinkpathDest: (link: string, source: string) => unknown };
+		const original = cache.getFirstLinkpathDest;
+		const asked = new Map<string, number>();
+		cache.getFirstLinkpathDest = (link: string, source: string) => {
+			const key = `${source}|${link}`;
+			asked.set(key, (asked.get(key) ?? 0) + 1);
+			return original(link, source);
+		};
+		new Audit(app, new TypeRegistry(app, REGISTRY)).run();
+		expect(Math.max(...asked.values())).toBe(1);
+	});
+});
+
+describe("audit: index wait and reuse (v0.9.3 review)", () => {
+	it("trusts a completed first index even if one file has no entry", () => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), "Kai.md": { type: "character" } });
+		delete (app.metadataCache.resolvedLinks as Record<string, unknown>)["Kai.md"];
+		const audit = new Audit(app, new TypeRegistry(app, REGISTRY), "", () => true);
+		expect(find(audit.run(), "orphan")).toHaveLength(1);
+		expect(audit.indexing).toBe(false);
+	});
+
+	it("a reused audit reports orphans again once the index is back", () => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), "Kai.md": { type: "character" } });
+		const links = app.metadataCache.resolvedLinks as Record<string, Record<string, number>>;
+		const saved = links["Kai.md"];
+		delete links["Kai.md"];
+		const audit = new Audit(app, new TypeRegistry(app, REGISTRY));
+		expect(find(audit.run(), "orphan")).toEqual([]);
+		links["Kai.md"] = saved;
+		expect(find(audit.run(), "orphan")).toHaveLength(1);
+		expect(audit.indexing).toBe(false);
+	});
+
+	it("a reused audit sees a link that started resolving since its last run", () => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({ [REGISTRY]: registryNote(), "Kai.md": { type: "character", related: "[[Later]]" } });
+		const audit = new Audit(app, new TypeRegistry(app, REGISTRY));
+		expect(find(audit.run(), "broken-field-link")).toHaveLength(1);
+		const cache = app.metadataCache as unknown as { getFirstLinkpathDest: (link: string, source: string) => unknown };
+		const original = cache.getFirstLinkpathDest;
+		cache.getFirstLinkpathDest = (link, source) => (link === "Later" ? { path: "Later.md", basename: "Later" } : original(link, source));
+		expect(find(audit.run(), "broken-field-link")).toEqual([]);
+	});
+});

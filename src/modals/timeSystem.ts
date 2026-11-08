@@ -36,6 +36,9 @@ export class TimeSystemModal extends Modal {
 	private earthEl!: HTMLElement;
 	private previewEl!: HTMLElement;
 	private errorEls = new Map<TimeIssue, HTMLElement>();
+	private inputEls = new Map<TimeIssue, HTMLInputElement>();
+	/** "Enter an Earth year first" — shown while epoch and ratio cannot matter. */
+	private earthHintEl: HTMLElement | null = null;
 	private saveButton: HTMLButtonElement | null = null;
 	/** True from Save until the outcome is known, so notes are never rescaled twice. */
 	private busy = false;
@@ -111,6 +114,10 @@ export class TimeSystemModal extends Modal {
 		this.numberRow(this.earthEl, "ratio", "time.editor.ratio", (value) => {
 			this.texts.ratio = value;
 		});
+		this.earthHintEl = this.earthEl.createDiv({
+			cls: "setting-item-description plc-time-system-hint",
+			text: this.t("time.editor.earthFirst"),
+		});
 
 		this.previewEl = this.contentEl.createDiv({ cls: "plc-time-system-preview" });
 
@@ -141,6 +148,7 @@ export class TimeSystemModal extends Modal {
 			.setDesc(this.t(`${key}.desc`))
 			.addText((text) => {
 				text.inputEl.inputMode = "decimal";
+				this.inputEls.set(issue, text.inputEl);
 				text.setValue(initial).onChange((value) => {
 					store(value);
 					this.refresh();
@@ -166,6 +174,14 @@ export class TimeSystemModal extends Modal {
 		this.draft.earthRatio = linked ? parseNumber(this.texts.ratio) : this.original.earthRatio;
 
 		this.earthEl.toggleClass("is-hidden", this.draft.async);
+		// Without an Earth year the epoch and ratio are ignored, so they cannot
+		// be typed into until there is one.
+		const hasEarthYear = this.texts.earthYear.trim().length > 0;
+		for (const issue of ["epoch", "ratio"] as TimeIssue[]) {
+			const input = this.inputEls.get(issue);
+			if (input) input.disabled = !hasEarthYear;
+		}
+		this.earthHintEl?.toggleClass("is-hidden", hasEarthYear);
 
 		const issues = validateTime(this.draft);
 		for (const [issue, el] of this.errorEls) {

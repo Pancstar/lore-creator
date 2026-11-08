@@ -3,6 +3,7 @@ import { linkTarget } from "../links";
 import { VersionStore } from "./store";
 import { asString } from "../frontmatter";
 import { loreFiles } from "../scope";
+import { buildVersionSetsNote } from "../setup/defaults";
 
 export interface VersionSetEntry {
 	/** Link text pointing at the active note, e.g. `Yükseliş`. */
@@ -57,6 +58,8 @@ export class VersionSetStore {
 		private app: App,
 		private versions: VersionStore,
 		private setsPath: string,
+		/** Language of a sets note created here, read when it is created. */
+		private language: () => "en" | "tr",
 	) {}
 
 	setPath(path: string) {
@@ -114,7 +117,7 @@ export class VersionSetStore {
 	/** Records the versions currently active, so the author can return to them. */
 	async capture(name: string): Promise<VersionSet> {
 		const entries: VersionSetEntry[] = this.versionedNotes().map((file) => ({
-			note: file.basename,
+			note: this.app.metadataCache.fileToLinktext(file, this.setsPath, true),
 			version: this.versions.info(file).number,
 		}));
 
@@ -213,21 +216,7 @@ export class VersionSetStore {
 			await this.app.vault.createFolder(folder);
 		}
 
-		return this.app.vault.create(
-			path,
-			[
-				"---",
-				"type: system",
-				'icon: "🧷"',
-				"sets: []",
-				"---",
-				"",
-				"# Sürüm Setleri",
-				"",
-				"> Bu dosyanın frontmatter'ı eklenti tarafından yönetilir.",
-				"> Her set, hangi notun hangi sürümünün aktif olacağını kaydeder.",
-				"",
-			].join("\n"),
-		);
+		// Same note the setup writes, in the interface language.
+		return this.app.vault.create(path, buildVersionSetsNote(this.language()));
 	}
 }

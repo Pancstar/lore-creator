@@ -60,6 +60,14 @@ export class TimePickerModal extends Modal {
 		this.label = current.label;
 		this.labelTouched = current.label.length > 0;
 		this.uncertain = current.uncertain;
+		this.initial = this.snapshot();
+	}
+
+	/** What the picker held when it opened, to tell whether anything was changed. */
+	private initial: string;
+
+	private snapshot(): string {
+		return JSON.stringify([this.precision, this.start, this.end, this.label, this.uncertain]);
 	}
 
 	onOpen() {
@@ -158,7 +166,13 @@ export class TimePickerModal extends Modal {
 		if (onEditSystem) {
 			const link = this.bodyEl.createEl("button", { cls: "plc-link-button", text: this.i18n.t("time.editSystem") });
 			link.addEventListener("click", () => {
-				this.close();
+				// What was typed here is kept: saved first when it changed, and the
+				// picker stays open on an error rather than dropping it.
+				if (this.snapshot() !== this.initial) {
+					if (!this.submit()) return; // submit closes on success
+				} else {
+					this.close();
+				}
 				onEditSystem();
 			});
 		}
@@ -240,14 +254,15 @@ export class TimePickerModal extends Modal {
 		this.previewEl.setText(`${readable} (${time})${earthPart}`);
 	}
 
-	private submit() {
+	/** Saves and closes; false (and stays open) when the value cannot be saved. */
+	private submit(): boolean {
 		const timeSystem = this.universe.readTime();
 		const start = partsToTime(this.start, timeSystem, this.precision);
 		const end = this.end ? partsToTime(this.end, timeSystem, this.precision) : null;
 
 		if (end !== null && end < start) {
 			new Notice(this.i18n.t("time.error.endBeforeStart"));
-			return;
+			return false;
 		}
 
 		this.onSubmit({
@@ -258,6 +273,7 @@ export class TimePickerModal extends Modal {
 			uncertain: this.uncertain,
 		});
 		this.close();
+		return true;
 	}
 
 	onClose() {

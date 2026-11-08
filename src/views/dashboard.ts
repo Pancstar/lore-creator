@@ -3,6 +3,7 @@ import type LorePlugin from "../main";
 import { Audit, ISSUE_KINDS, Issue, IssueKind } from "../audit";
 import { asString } from "../frontmatter";
 import { asStatus } from "../timeline/model";
+import { isUnfinished } from "../status";
 import { loreFiles } from "../scope";
 import { addExampleBadge } from "../guide/badge";
 
@@ -35,7 +36,12 @@ export class DashboardView extends ItemView {
 		private plugin: LorePlugin,
 	) {
 		super(leaf);
-		this.audit = new Audit(this.app, this.plugin.types);
+		this.audit = new Audit(
+			this.app,
+			this.plugin.types,
+			() => this.plugin.settings.versionSetsFile,
+			() => this.plugin.linksResolved,
+		);
 	}
 
 	getViewType(): string {
@@ -115,9 +121,10 @@ export class DashboardView extends ItemView {
 	private renderUnfinished(notes: LoreNote[]) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 
-		// A note with no status is a draft, here as in the banner and the timeline.
+		// A note with no status is a draft, here as in the banner and the timeline;
+		// timeline definitions are structure, not story, and never "unfinished".
 		const unfinished: Unfinished[] = notes
-			.filter((note) => asStatus(note.frontmatter.status) !== "done")
+			.filter((note) => isUnfinished(note.frontmatter))
 			.map((note) => ({
 				file: note.file,
 				title: note.file.basename,
@@ -158,6 +165,11 @@ export class DashboardView extends ItemView {
 		}
 	}
 
+	/** True while the open report waits for Obsidian to finish indexing links. */
+	get waitingForIndex(): boolean {
+		return this.auditOpen && this.audit.indexing;
+	}
+
 	private renderAudit() {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		// The audit is a full vault pass; while collapsed nobody reads it, so it
@@ -185,10 +197,15 @@ export class DashboardView extends ItemView {
 		if (!issues) return;
 
 		this.contentEl.createEl("p", { cls: "plc-list-meta", text: t("dashboard.audit.desc") });
+		if (this.audit.indexing) {
+			this.contentEl.createEl("p", { cls: "plc-list-meta", text: t("dashboard.audit.indexing") });
+		}
 		this.renderAuditChips(hidden);
 
 		if (issues.length === 0) {
-			this.contentEl.createEl("p", { cls: "plc-list-meta", text: t("dashboard.audit.clean") });
+			// While orphans are still unchecked, "nothing" would claim too much.
+			const clean = this.audit.indexing ? "dashboard.audit.cleanSoFar" : "dashboard.audit.clean";
+			this.contentEl.createEl("p", { cls: "plc-list-meta", text: t(clean) });
 			return;
 		}
 
@@ -233,7 +250,11 @@ export class DashboardView extends ItemView {
 			const chip = chipsEl.createEl("button", {
 				cls: `plc-chip${hidden.has(kind) ? " is-off" : ""}`,
 				text: this.plugin.i18n.t(`audit.chip.${kind}`),
-				attr: { title: this.plugin.i18n.t(`audit.${kind}`), "aria-pressed": String(!hidden.has(kind)) },
+				attr: {
+					title: this.plugin.i18n.t(`audit.${kind}`),
+					"aria-pressed": String(!hidden.has(kind)),
+					"data-kind": kind,
+				},
 			});
 			chip.addEventListener("click", () => void this.toggleAuditKind(kind));
 		}
@@ -248,5 +269,7 @@ export class DashboardView extends ItemView {
 		// would drop every cache and repaint every view for a filter click.
 		await this.plugin.saveData(this.plugin.settings);
 		this.render();
+		// The redraw replaced the chip; give keyboard focus back to its successor.
+		this.contentEl.querySelector<HTMLElement>(`.plc-chip[data-kind="${kind}"]`)?.focus();
 	}
 }

@@ -11,8 +11,9 @@ export function enterSubmits(container: HTMLElement): void {
 		if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
 		// A field with its own Enter handling has already acted.
 		if (event.defaultPrevented) return;
-		const target = event.target;
-		if (!(target instanceof HTMLInputElement)) return;
+		// `instanceOf` works across windows; `instanceof` fails in a popout.
+		const target = event.target as Node | null;
+		if (!target?.instanceOf(HTMLInputElement)) return;
 		if (["button", "submit", "checkbox", "radio"].includes(target.type)) return;
 
 		const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>("button.mod-cta"));

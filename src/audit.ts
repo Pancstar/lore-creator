@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian";
+import { App, TFile, normalizePath } from "obsidian";
 import { linkTargets } from "./links";
 import { TimelineModel } from "./timeline/model";
 import { asNumberOrNull, asString } from "./frontmatter";
@@ -19,7 +19,8 @@ export type IssueKind =
 	| "law-out-of-scope"
 	| "cycle"
 	| "overlap"
-	| "orphan";
+	| "orphan"
+	| "ambiguous-link";
 
 /** Display order in the report and in the filter chips. */
 export const ISSUE_KINDS: IssueKind[] = [
@@ -37,6 +38,7 @@ export const ISSUE_KINDS: IssueKind[] = [
 	"cycle",
 	"overlap",
 	"orphan",
+	"ambiguous-link",
 ];
 
 /** Types that exist to be referred *from*, not linked *to*. */
@@ -84,15 +86,32 @@ const OPTIONAL_LINK_FIELDS = ["idea-for"];
  */
 export class Audit {
 	private model: TimelineModel;
+	/** True after a run that skipped the orphan check because links were still being indexed. */
+	indexing = false;
 
 	constructor(
 		private app: App,
 		private types: TypeRegistry,
+		/** The version sets note, whose entries name notes by link text; read per run so a settings change applies. */
+		private setsPath: string | (() => string) = "",
+		/** True once Obsidian has finished its first full link index this session. */
+		private linksResolved: () => boolean = () => false,
 	) {
 		this.model = new TimelineModel(this.app);
 	}
 
 	run(): Issue[] {
+		// Fresh per run: the vault may have changed since the last one.
+		this.resolved.clear();
+		try {
+			return this.runChecks();
+		} finally {
+			// Not kept between runs: it would hold on to files that may be deleted.
+			this.resolved.clear();
+		}
+	}
+
+	private runChecks(): Issue[] {
 		const issues: Issue[] = [];
 		const notes = this.collect();
 		const definitions = this.model.definitions();
@@ -117,9 +136,65 @@ export class Audit {
 
 		this.checkCycles(issues, notes);
 		this.checkOverlaps(issues, notes);
-		this.checkOrphans(issues, notes);
+		// Until Obsidian has read every note's links, nearly everything would look
+		// unlinked; the orphan check waits and the report says why.
+		// Once the first full index has finished, a note just created or renamed
+		// (briefly missing from the index) does not hide the check again.
+		this.indexing = !(this.linksResolved() || this.linksIndexed());
+		if (!this.indexing) this.checkOrphans(issues, notes);
+		this.checkAmbiguousRecords(issues);
 
 		return issues;
+	}
+
+	/** Every markdown file has an entry in Obsidian's resolved-links index. */
+	private linksIndexed(): boolean {
+		const resolved = this.app.metadataCache.resolvedLinks;
+		return this.app.vault.getMarkdownFiles().every((file) => file.path in resolved);
+	}
+
+	/**
+	 * Records written before v0.9.0 name their note by name only. When several
+	 * notes share that name, Obsidian picks one, possibly the wrong one. New
+	 * records are written unambiguously; this points at the old ones to fix.
+	 */
+	private checkAmbiguousRecords(issues: Issue[]) {
+		const files = loreFiles(this.app);
+		// Every markdown file counts, templates too: a bare name can resolve to
+		// any of them, and Obsidian matches names regardless of case.
+		const shared = new Map<string, number>();
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const key = file.basename.toLowerCase();
+			shared.set(key, (shared.get(key) ?? 0) + 1);
+		}
+		const ambiguous = (link: string) =>
+			!link.includes("/") &&
+			// A name that is also an exact root path resolves to that file.
+			!this.app.vault.getFileByPath(`${link}.md`) &&
+			(shared.get(link.toLowerCase()) ?? 0) > 1;
+
+		for (const file of files) {
+			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+			const target = linkTargets(frontmatter?.["version-of"])[0];
+			if (target && ambiguous(target)) issues.push({ kind: "ambiguous-link", file, detail: target });
+		}
+
+		const setsPath = typeof this.setsPath === "function" ? this.setsPath() : this.setsPath;
+		const setsFile = setsPath ? this.app.vault.getFileByPath(normalizePath(setsPath)) : null;
+		const sets: unknown = setsFile ? this.app.metadataCache.getFileCache(setsFile)?.frontmatter?.sets : undefined;
+		if (!setsFile || !Array.isArray(sets)) return;
+		const seen = new Set<string>();
+		for (const set of sets) {
+			const entries: unknown = (set as Record<string, unknown> | null)?.entries;
+			if (!Array.isArray(entries)) continue;
+			for (const entry of entries) {
+				const note = linkTargets((entry as Record<string, unknown> | null)?.note)[0];
+				if (note && ambiguous(note) && !seen.has(note)) {
+					seen.add(note);
+					issues.push({ kind: "ambiguous-link", file: setsFile, detail: note });
+				}
+			}
+		}
 	}
 
 	/**
@@ -295,8 +370,21 @@ export class Audit {
 		return notes;
 	}
 
+	/**
+	 * Several checks look at the same links (a `next` is broken, one-sided,
+	 * backwards and part of a loop), so each note's link is resolved once per run.
+	 */
+	private resolved = new Map<string, TFile | null>();
+
 	private resolve(link: string, from: Note): TFile | null {
-		return this.app.metadataCache.getFirstLinkpathDest(link, from.file.path);
+		// A newline cannot appear in a path, so it separates the pair safely.
+		const key = [from.file.path, link].join("\n");
+		let target = this.resolved.get(key);
+		if (target === undefined) {
+			target = this.app.metadataCache.getFirstLinkpathDest(link, from.file.path);
+			this.resolved.set(key, target);
+		}
+		return target;
 	}
 
 	/** Link fields this note may carry: the shared ones plus its type's own. */
@@ -332,11 +420,17 @@ export class Audit {
 
 	private checkLaws(issues: Issue[], note: Note, notes: Map<string, Note>) {
 		for (const field of ["laws", "breaks-law"] as const) {
+			const seen = new Set<string>();
 			for (const link of linkTargets(note.frontmatter[field])) {
 				const target = this.resolve(link, note);
-				const law = target ? notes.get(target.path) : undefined;
-				if (!target || !law) continue; // missing targets are already broken-field-link
-				if (law.type !== "law") {
+				if (!target) continue; // missing targets are already broken-field-link
+				// The same target listed twice is one finding, not two.
+				if (seen.has(target.path)) continue;
+				seen.add(target.path);
+				// A note with no frontmatter, a template or an archived version is
+				// not among the checked notes — and is not a law either.
+				const law = notes.get(target.path);
+				if (!law || law.type !== "law") {
 					issues.push({ kind: "law-not-law", file: note.file, detail: target.basename });
 					continue;
 				}

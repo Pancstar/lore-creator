@@ -39,6 +39,16 @@ export function linkTargets(value: unknown): string[] {
 	return flat.map(linkTarget).filter((target) => target.length > 0);
 }
 
+/**
+ * A `[[link]]` the plugin writes into a record (`version-of`, `promoted-to`…).
+ * Obsidian picks the link text that names only this file (by default the
+ * shortest one; the vault's link format setting may make it relative or
+ * absolute), so two notes sharing a name cannot be mixed up later.
+ */
+export function linkTo(app: App, file: TFile, sourcePath: string): string {
+	return `[[${app.metadataCache.fileToLinktext(file, sourcePath, true)}]]`;
+}
+
 export function resolveLink(app: App, linkpath: string, sourcePath: string): TFile | null {
 	return app.metadataCache.getFirstLinkpathDest(linkpath, sourcePath);
 }

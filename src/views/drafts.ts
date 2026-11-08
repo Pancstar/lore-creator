@@ -111,7 +111,7 @@ export class DraftsView extends ItemView {
 		});
 
 		if (draft.promotedTo) {
-			rowEl.createDiv({ cls: "plc-list-meta", text: t("drafts.promotedTo", draft.promotedTo) });
+			rowEl.createDiv({ cls: "plc-list-meta", text: t("drafts.promotedTo", draft.promotedTo.split("/").pop() ?? draft.promotedTo) });
 		}
 
 		const actionsEl = rowEl.createDiv({ cls: "plc-list-actions" });

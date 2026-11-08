@@ -15,13 +15,47 @@ export interface TimelineFilter {
 
 export const EMPTY_FILTER: TimelineFilter = { statuses: [], flows: [], types: [] };
 
+/* Written as code points: the characters themselves are invisible in a diff. */
+const COMBINING_DOT_ABOVE = String.fromCharCode(0x0307);
+const DOTLESS_I = String.fromCharCode(0x0131);
+const COMBINING_MARKS = new RegExp(`[${String.fromCharCode(0x0300)}-${String.fromCharCode(0x036f)}]`, "g");
+
 /**
- * Lowercases for matching across English and Turkish names alike: `İ`, `I`,
- * `ı` and `i` all fold to `i`, so "istanbul" finds "İstanbul" and "KIRIK"
- * finds "Kırık" whatever the system locale is.
+ * Case only: lowercase, with `İ`, `I`, `ı` and `i` all as `i`, whatever the
+ * system locale is. Accents stay, so "ölü" is not "olu".
  */
+export function caseOnly(text: string): string {
+	return text.toLowerCase().split(COMBINING_DOT_ABOVE).join("").split(DOTLESS_I).join("i");
+}
+
+/** Case and accents folded: `ş` is `s`, `ç` is `c`, so "isik" reads as "ışık". */
 export function foldCase(text: string): string {
-	return text.toLowerCase().replace(/̇/g, "").replace(/ı/g, "i");
+	return caseOnly(text).normalize("NFD").replace(COMBINING_MARKS, "");
+}
+
+/**
+ * A search test built once per query. A query typed without accents
+ * ("isik", "kilic") matches with or without them; a query typed with accents
+ * ("ölü", "Gün") means them, so "ölü" does not also find "solucan".
+ */
+export function textMatcher(query: string): (text: string) => boolean {
+	const raw = query.trim();
+	if (!raw) return () => true;
+	const exact = caseOnly(raw);
+	const plain = foldCase(raw);
+	if (plain !== exact) return (text) => caseOnly(text).includes(exact);
+	return (text) => foldCase(text).includes(plain);
+}
+
+/** One matcher kept for the last query: a redraw asks the same query of every note. */
+let lastQuery: string | null = null;
+let lastMatcher: (text: string) => boolean = () => true;
+function matcherFor(query: string): (text: string) => boolean {
+	if (query !== lastQuery) {
+		lastQuery = query;
+		lastMatcher = textMatcher(query);
+	}
+	return lastMatcher;
 }
 
 /**
@@ -41,9 +75,8 @@ export function isFiltering(filter: TimelineFilter, query: string): boolean {
 }
 
 function matchesQuery(node: TimelineNode, query: string): boolean {
-	const wanted = foldCase(query.trim());
-	if (!wanted) return true;
-	return foldCase(node.title).includes(wanted) || foldCase(node.timeLabel).includes(wanted);
+	const matches = matcherFor(query);
+	return matches(node.title) || matches(node.timeLabel);
 }
 
 export function nodeMatches(node: TimelineNode, filter: TimelineFilter, query: string): boolean {

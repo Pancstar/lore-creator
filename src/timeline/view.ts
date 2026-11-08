@@ -83,6 +83,9 @@ const STRIP_REACH = 100000;
 
 const STATUSES: NodeStatus[] = ["draft", "partial", "done"];
 
+/** Hands each timeline view its own SVG marker id. */
+let markerCounter = 0;
+
 /** Reads a saved filter back, dropping anything that is not a list of strings. */
 function readFilter(value: unknown): TimelineFilter {
 	const record = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
@@ -160,6 +163,12 @@ export class TimelineView extends ItemView {
 	private longPressTimer: number | null = null;
 	/** The note holding keyboard focus, so a redraw can hand it back. */
 	private focusedPath: string | null = null;
+	/** Unique per view: two timeline tabs must not share an arrowhead id. */
+	private markerId = `plc-arrow-${++markerCounter}`;
+	/** A timeline to switch to as soon as it exists (`showTimeline`). */
+	private wantedTimelineId: string | null = null;
+	/** When a pointer last went down on the canvas, to tell a click's focus from Tab's. */
+	private lastPointerDown = 0;
 	/** "Split from …" under the toolbar, for a parallel timeline. */
 	private divergenceEl!: HTMLElement;
 	/** When the shown timeline split from its parent, if that is known. */
@@ -250,8 +259,17 @@ export class TimelineView extends ItemView {
 		// written the note that describes it.
 		const known = new Set(definitions.map((definition) => definition.id));
 		const orphanIds = referenced.filter((id) => !known.has(id));
+		const exists = (id: string) => known.has(id) || orphanIds.includes(id);
 
-		if (this.timelineId && !known.has(this.timelineId) && !orphanIds.includes(this.timelineId)) {
+		// A timeline asked for by name wins once its notes are indexed; until
+		// then the view shows what it can and keeps waiting for it.
+		let arrived = false;
+		if (this.wantedTimelineId && exists(this.wantedTimelineId)) {
+			this.timelineId = this.wantedTimelineId;
+			this.wantedTimelineId = null;
+			arrived = true;
+		}
+		if (this.timelineId && !exists(this.timelineId)) {
 			this.timelineId = null;
 		}
 		this.timelineId ??= definitions[0]?.id ?? orphanIds[0] ?? null;
@@ -259,6 +277,25 @@ export class TimelineView extends ItemView {
 		this.renderToolbar(definitions, orphanIds);
 		this.renderDivergence(definitions);
 		this.renderCanvas(definitions);
+		if (arrived) {
+			this.fitToView();
+			this.app.workspace.requestSaveLayout();
+		}
+	}
+
+	/**
+	 * `href="#"` makes a link reachable by Tab and Enter; middle-click and drag
+	 * would still act on that href, so they are stopped here.
+	 */
+	private inertLink(link: HTMLElement) {
+		link.setAttr("draggable", "false");
+		link.addEventListener("auxclick", (event) => event.preventDefault());
+	}
+
+	/** Switches to a timeline that may not be indexed yet (e.g. notes just created). */
+	showTimeline(id: string) {
+		this.wantedTimelineId = id;
+		this.render();
 	}
 
 	/**
@@ -281,10 +318,12 @@ export class TimelineView extends ItemView {
 		const [before, after] = t("timeline.divergedFrom", "\u0000").split("\u0000");
 		this.divergenceEl.createSpan({ text: before });
 		if (parent) {
-			const link = this.divergenceEl.createEl("a", { text: parent.name, cls: "plc-divergence-parent" });
+			const link = this.divergenceEl.createEl("a", { text: parent.name, cls: "plc-divergence-parent", href: "#" });
+			this.inertLink(link);
 			link.addEventListener("click", (event) => {
 				event.preventDefault();
 				this.timelineId = parent.id;
+				this.wantedTimelineId = null;
 				this.resetPan();
 				this.render();
 				this.app.workspace.requestSaveLayout();
@@ -302,9 +341,10 @@ export class TimelineView extends ItemView {
 		this.divergenceTime = divergenceMoment(point);
 
 		this.divergenceEl.createSpan({ text: " · " });
-		const pointEl = this.divergenceEl.createEl(pointFile ? "a" : "span", {
-			text: pointFile?.basename ?? definition.divergencePoint,
-		});
+		const pointEl = pointFile
+			? this.divergenceEl.createEl("a", { text: pointFile.basename, href: "#" })
+			: this.divergenceEl.createSpan({ text: definition.divergencePoint });
+		if (pointFile) this.inertLink(pointEl);
 		if (pointFile) {
 			pointEl.addEventListener("click", (event) => {
 				event.preventDefault();
@@ -318,6 +358,19 @@ export class TimelineView extends ItemView {
 	}
 
 	private renderToolbar(definitions: TimelineDefinition[], orphanIds: string[]) {
+		// A button pressed from the keyboard is rebuilt below; hand focus back to its successor.
+		const focused = this.toolbarMainEl.doc.activeElement;
+		const focusedAction = this.toolbarMainEl.contains(focused) ? focused?.getAttribute("data-action") : null;
+		try {
+			this.buildToolbar(definitions, orphanIds);
+		} finally {
+			if (focusedAction) {
+				this.toolbarMainEl.querySelector<HTMLElement>(`[data-action="${focusedAction}"]`)?.focus();
+			}
+		}
+	}
+
+	private buildToolbar(definitions: TimelineDefinition[], orphanIds: string[]) {
 		this.toolbarMainEl.empty();
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 
@@ -325,7 +378,10 @@ export class TimelineView extends ItemView {
 		this.searchWrapEl.toggleClass("is-hidden", empty);
 		if (empty) return;
 
-		const select = this.toolbarMainEl.createEl("select", { cls: "dropdown plc-timeline-select" });
+		const select = this.toolbarMainEl.createEl("select", {
+			cls: "dropdown plc-timeline-select",
+			attr: { "data-action": "timeline-select" },
+		});
 		for (const definition of definitions) {
 			const suffix = definition.kind === "parallel" ? ` · ${t("timeline.parallel")}` : "";
 			select.createEl("option", { value: definition.id, text: `${definition.name}${suffix}` });
@@ -336,6 +392,7 @@ export class TimelineView extends ItemView {
 		if (this.timelineId) select.value = this.timelineId;
 		select.addEventListener("change", () => {
 			this.timelineId = select.value;
+			this.wantedTimelineId = null; // the author's own choice overrides a pending one
 			this.resetPan();
 			this.render();
 			this.app.workspace.requestSaveLayout();
@@ -358,6 +415,7 @@ export class TimelineView extends ItemView {
 			t(locked ? "timeline.unlock" : "timeline.lock"),
 			() => void this.toggleLock(),
 			locked,
+			"lock",
 		);
 
 		this.addToolbarButton("layers", t("timeline.versions"), () =>
@@ -397,10 +455,12 @@ export class TimelineView extends ItemView {
 		label: string,
 		onClick: (event: MouseEvent) => void,
 		active = false,
+		/** Stable name for refocusing; the lock button changes icon and label. */
+		action = icon,
 	): HTMLButtonElement {
 		const button = this.toolbarMainEl.createEl("button", {
 			cls: `clickable-icon plc-timeline-button${active ? " is-active" : ""}`,
-			attr: { "aria-label": label, title: label },
+			attr: { "aria-label": label, title: label, "data-action": action },
 		});
 		setIcon(button, icon);
 		button.addEventListener("click", onClick);
@@ -601,6 +661,7 @@ export class TimelineView extends ItemView {
 
 		if (timelineId !== this.timelineId) {
 			this.timelineId = timelineId;
+			this.wantedTimelineId = null;
 			this.render();
 			this.app.workspace.requestSaveLayout();
 		}
@@ -614,7 +675,8 @@ export class TimelineView extends ItemView {
 
 	private renderCanvas(definitions: TimelineDefinition[]) {
 		// Emptying the canvas drops focus on the body; remember whether to restore it.
-		const hadFocus = this.canvasEl.contains(document.activeElement) && document.activeElement !== this.canvasEl;
+		const active = this.canvasEl.doc.activeElement;
+		const hadFocus = this.canvasEl.contains(active) && active !== this.canvasEl;
 		// A long press under way belongs to a box that is about to be replaced.
 		this.clearLongPress();
 		this.canvasEl.empty();
@@ -665,7 +727,7 @@ export class TimelineView extends ItemView {
 
 		this.layout = computeLayout(graph, {
 			flows: definition?.flows ?? [],
-			pixelsPerUnit: autoPixelsPerUnit(span) * this.plugin.settings.timeDensity,
+			pixelsPerUnit: autoPixelsPerUnit(span) * Math.min(MAX_DENSITY, Math.max(MIN_DENSITY, this.plugin.settings.timeDensity)),
 			unnamedFlowLabel: t("timeline.unnamedFlow"),
 			untimedLabel: t("timeline.untimed"),
 			// A moment is labelled with the author's own wording when they gave it
@@ -700,7 +762,7 @@ export class TimelineView extends ItemView {
 
 		const defs = svgEl("defs");
 		const marker = svgEl("marker", {
-			id: "plc-arrow",
+			id: this.markerId,
 			viewBox: "0 0 10 10",
 			refX: 9,
 			refY: 5,
@@ -732,6 +794,7 @@ export class TimelineView extends ItemView {
 
 		this.applyTransform();
 		this.applyHighlight();
+		this.updateRoving();
 	}
 
 	private drawLanes(scene: SVGGElement, labels: SVGGElement, layout: Layout) {
@@ -893,7 +956,7 @@ export class TimelineView extends ItemView {
 			const path = svgEl("path", {
 				d: `M ${x1} ${y1} C ${x1 + reach} ${y1}, ${x2 - reach} ${y2}, ${x2} ${y2}`,
 				class: "plc-edge",
-				"marker-end": "url(#plc-arrow)",
+				"marker-end": `url(#${this.markerId})`,
 			});
 			this.edgeEls.push({ from: edge.from, to: edge.to, el: path });
 			group.appendChild(path);
@@ -922,7 +985,7 @@ export class TimelineView extends ItemView {
 		const group = svgEl("g", {
 			class: `plc-node is-${node.status}${node.uncertain ? " is-uncertain" : ""}`,
 			transform: `translate(${entry.x}, ${entry.y})`,
-			tabindex: 0,
+			tabindex: -1,
 			role: "button",
 			"data-path": node.path,
 		});
@@ -1034,9 +1097,12 @@ export class TimelineView extends ItemView {
 			return;
 		}
 
-		const members = (this.layout?.placed ?? [])
-			.filter((entry) => entry.node.flow === lane.id)
-			.map((entry) => entry.node.file);
+		// Archived versions in the lane are renamed with it, so switching back to
+		// one does not land the note in a lane that no longer exists.
+		const members = [
+			...(this.layout?.placed ?? []).filter((entry) => entry.node.flow === lane.id).map((entry) => entry.node.file),
+			...this.model.archivesInLane(definition.id, lane.id),
+		];
 
 		new LaneEditModal(
 			this.app,
@@ -1421,6 +1487,7 @@ export class TimelineView extends ItemView {
 		});
 
 		this.registerDomEvent(this.canvasEl, "pointerdown", (event) => {
+			this.lastPointerDown = Date.now();
 			if (event.button !== 0) return;
 			pressed = true;
 			this.panned = false;
@@ -1506,7 +1573,12 @@ export class TimelineView extends ItemView {
 	private registerKeyboard() {
 		this.registerDomEvent(this.canvasEl, "focusin", (event) => {
 			const path = (event.target as Element | null)?.closest?.("[data-path]")?.getAttribute("data-path");
-			if (path) this.focusedPath = path;
+			if (path) {
+				this.focusedPath = path;
+				this.updateRoving();
+				// Tabbing in onto a note off screen pans to it; a click is already on it.
+				if (Date.now() - this.lastPointerDown > 300) this.ensureVisible(path);
+			}
 		});
 
 		this.registerDomEvent(this.canvasEl, "keydown", (event) => {
@@ -1565,10 +1637,23 @@ export class TimelineView extends ItemView {
 		});
 	}
 
+	/**
+	 * Roving tabindex: exactly one note is in the Tab order — the focused one,
+	 * else the first in reading order — so Tab enters the canvas once and
+	 * leaves it on the next press; arrows move between notes.
+	 */
+	private updateRoving() {
+		const placed = this.layout?.placed ?? [];
+		const first = [...placed].sort((a, b) => a.y - b.y || a.x - b.x)[0]?.node.path ?? null;
+		const current = this.focusedPath && this.nodeEls.has(this.focusedPath) ? this.focusedPath : first;
+		for (const [path, el] of this.nodeEls) el.setAttribute("tabindex", path === current ? "0" : "-1");
+	}
+
 	private focusNode(path: string) {
 		const el = this.nodeEls.get(path);
 		if (!el) return;
 		this.focusedPath = path;
+		this.updateRoving();
 		el.focus({ preventScroll: true });
 		this.ensureVisible(path);
 	}

@@ -66,12 +66,17 @@ export async function rescaleNotes(
 				const precision = frontmatter["time-precision"];
 				if (!hasDay(precision)) return;
 
-				originals.push({ file, time: frontmatter.time, timeEnd: frontmatter["time-end"] });
-
 				const time = asNumberOrNull(frontmatter.time);
 				const timeEnd = asNumberOrNull(frontmatter["time-end"]);
-				if (time !== null) frontmatter.time = rescaleTime(time, oldDays, newDays, precision);
-				if (timeEnd !== null) frontmatter["time-end"] = rescaleTime(timeEnd, oldDays, newDays, precision);
+				const nextTime = time === null ? null : rescaleTime(time, oldDays, newDays, precision);
+				const nextEnd = timeEnd === null ? null : rescaleTime(timeEnd, oldDays, newDays, precision);
+				// A note whose day lands on the same number (day 1, say) is not
+				// touched and not counted: the summary says what really changed.
+				if (nextTime === time && nextEnd === timeEnd) return;
+
+				originals.push({ file, time: frontmatter.time, timeEnd: frontmatter["time-end"] });
+				if (nextTime !== null) frontmatter.time = nextTime;
+				if (nextEnd !== null) frontmatter["time-end"] = nextEnd;
 			});
 		} catch (error) {
 			const earlier = originals.filter((entry) => entry.file !== file);

@@ -161,3 +161,31 @@ describe("review fixes", () => {
 		expect(pruneFilter(filter, ["a", "gone"])).toBe(filter);
 	});
 });
+
+describe("emoji search (v0.9.2)", () => {
+	it("matches Turkish keywords regardless of case and dotted/dotless i", async () => {
+		const { searchEmoji } = await import("../src/emoji");
+		expect(searchEmoji("KILIÇ").map((entry) => entry.char)).toContain("⚔️");
+		expect(searchEmoji("isik").map((entry) => entry.char)).toContain("🕯️");
+		expect(searchEmoji("SWORDS").map((entry) => entry.char)).toContain("⚔️");
+	});
+});
+
+describe("accent-aware search (v0.9.2 review)", () => {
+	it("an accented query matches only accented words; a plain one matches both", async () => {
+		const { searchEmoji } = await import("../src/emoji");
+		const hits = searchEmoji("ölü");
+		expect(hits.length).toBeGreaterThan(0);
+		for (const entry of hits) expect(`${entry.en} ${entry.tr}`.toLowerCase(), entry.char).toContain("ölü");
+		expect(searchEmoji("isik").map((entry) => entry.char)).toContain("🕯️");
+		expect(searchEmoji("KILIÇ").map((entry) => entry.char)).toContain("⚔️");
+	});
+
+	it("timeline search follows the same rule", () => {
+		const gun = node("Gun.md");
+		const gunTr = node("Gün doğumu.md");
+		expect(nodeMatches(gun, EMPTY_FILTER, "Gün")).toBe(false);
+		expect(nodeMatches(gunTr, EMPTY_FILTER, "Gün")).toBe(true);
+		expect(nodeMatches(gunTr, EMPTY_FILTER, "gun")).toBe(true);
+	});
+});

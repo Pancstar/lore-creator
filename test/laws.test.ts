@@ -54,3 +54,17 @@ describe("resolveTimelineId: bare ids win over same-named files", () => {
 		expect(model.resolveTimelineId("[[main]]", "Law.md")).toBe("primary");
 	});
 });
+
+describe("TimelineModel.archivesInLane", () => {
+	it("finds archived versions still filed under a lane", () => {
+		TimelineModel.invalidate();
+		const { app } = makeApp({
+			"Scene.md": { type: "event", timeline: "main", flow: "a" },
+			"Versions/Scene — v1.md": { type: "event", timeline: "main", flow: "a", "version-of": "[[Scene]]" },
+			"Versions/Other — v1.md": { type: "event", timeline: "main", flow: "b", "version-of": "[[Other]]" },
+			"Versions/Alt — v1.md": { type: "event", timeline: "alt", flow: "a", "version-of": "[[Alt]]" },
+		});
+		const paths = new TimelineModel(app).archivesInLane("main", "a").map((file) => file.path);
+		expect(paths).toEqual(["Versions/Scene — v1.md"]);
+	});
+});

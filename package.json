@@ -1,6 +1,6 @@
 {
 	"name": "lore-creator",
-	"version": "0.8.0",
+	"version": "0.9.3",
 	"description": "Design fictional universes: branching timelines, versioned story fragments, custom time systems and structured worldbuilding entities.",
 	"main": "main.js",
 	"scripts": {
@@ -24,7 +24,7 @@
 		"esbuild": "^0.25.12",
 		"eslint": "^10.8.0",
 		"eslint-plugin-obsidianmd": "^0.4.1",
-		"obsidian": "latest",
+		"obsidian": "1.13.0",
 		"tslib": "^2.8.1",
 		"typescript": "^5.7.2",
 		"typescript-eslint": "^8.65.0",

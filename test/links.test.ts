@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { linkPath, linkTarget, linkTargets } from "../src/links";
+import { linkPath, linkTarget, linkTargets, linkTo } from "../src/links";
+import { makeApp } from "./fakeApp";
 
 describe("linkPath", () => {
 	it("strips a heading", () => {
@@ -54,5 +55,17 @@ describe("review fixes", () => {
 
 	it("drops an alias from bare text too", () => {
 		expect(linkTarget("X|al")).toBe("X");
+	});
+});
+
+describe("linkTo", () => {
+	it("names a note by its name when it is the only one", () => {
+		const { app, file } = makeApp({ "Act 1/Scene.md": {}, "Other.md": {} });
+		expect(linkTo(app, file("Act 1/Scene.md"), "Versions/x.md")).toBe("[[Scene]]");
+	});
+
+	it("uses the path when another note shares the name", () => {
+		const { app, file } = makeApp({ "Act 1/Scene.md": {}, "Act 2/Scene.md": {} });
+		expect(linkTo(app, file("Act 2/Scene.md"), "Versions/x.md")).toBe("[[Act 2/Scene]]");
 	});
 });

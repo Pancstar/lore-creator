@@ -3,12 +3,14 @@ import type LorePlugin from "../main";
 import { ConfirmModal } from "../modals/confirm";
 import { SetupModal } from "../setup/wizard";
 import { ensureFolder } from "../noteFactory";
-import { VIEW_TYPE_TIMELINE } from "../timeline/view";
+import { TimelineView, VIEW_TYPE_TIMELINE } from "../timeline/view";
 import {
 	EXAMPLE_MARKER,
+	EXAMPLE_TIMELINE_ID,
 	EXAMPLE_TYPES,
 	ExampleLang,
 	buildExampleNotes,
+	foldersToTidy,
 	exampleFolder,
 	isExampleBasename,
 } from "./exampleContent";
@@ -90,9 +92,12 @@ async function removeExample(plugin: LorePlugin) {
 	const files = findExampleFiles(app);
 	let removed = 0;
 	let failed = false;
+	const removedPaths: string[] = [];
 	for (const file of files) {
 		try {
+			const path = file.path;
 			await app.fileManager.trashFile(file);
+			removedPaths.push(path);
 			removed++;
 		} catch (error) {
 			console.error("Lore Creator: could not remove", file.path, error);
@@ -100,10 +105,11 @@ async function removeExample(plugin: LorePlugin) {
 		}
 	}
 	try {
-		// Leave the folders only if the author put their own things in them.
-		for (const lang of ["en", "tr"] as ExampleLang[]) {
-			await trashIfEmpty(app, normalizePath(`${exampleFolder(lang)}/${lang === "tr" ? "Sürümler" : "Versions"}`));
-			await trashIfEmpty(app, normalizePath(exampleFolder(lang)));
+		// Only folders this removal emptied go, and only if the author put
+		// nothing of their own in them. A same-named folder of theirs stays.
+		const roots = (["en", "tr"] as ExampleLang[]).map((lang) => normalizePath(exampleFolder(lang)));
+		for (const folder of foldersToTidy(removedPaths, roots)) {
+			await trashIfEmpty(app, folder);
 		}
 	} catch (error) {
 		console.error("Lore Creator: could not tidy the example folder", error);
@@ -192,6 +198,8 @@ class CreateExampleModal extends Modal {
 			}
 			new Notice(this.t("example.created"));
 			await this.plugin.activateView(VIEW_TYPE_TIMELINE);
+			const view = app.workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)[0]?.view;
+			if (view instanceof TimelineView) view.showTimeline(EXAMPLE_TIMELINE_ID);
 		} catch (error) {
 			console.error("Lore Creator: could not create the example story", error);
 			new Notice(this.t("example.failed"));

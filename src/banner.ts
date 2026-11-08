@@ -6,6 +6,7 @@ import { VersionMenuModal } from "./modals/versionMenu";
 import { openTimeSystemEditor } from "./modals/timeSystem";
 import { isTimePrecision } from "./time";
 import { asNumberOrNull, asString } from "./frontmatter";
+import { tracksStatus } from "./status";
 
 const BANNER_CLASS = "plc-banner";
 /** Marks a view showing a lore note, so CSS hides Properties only there. */
@@ -27,14 +28,7 @@ function isStatus(value: unknown): value is Status {
 export class Banner {
 	constructor(private plugin: LorePlugin) {}
 
-	/** Redraws the banner in every open markdown view. */
-	refreshAll() {
-		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
-			const view = leaf.view;
-			if (view instanceof MarkdownView) this.render(view);
-		}
-	}
-
+	/** Takes the banner out of every open markdown view, hidden ones too. */
 	removeAll() {
 		for (const leaf of this.plugin.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view;
@@ -112,13 +106,16 @@ export class Banner {
 			});
 		}
 
-		const status = isStatus(frontmatter.status) ? frontmatter.status : "draft";
-		const statusButton = rowEl.createEl("button", {
-			cls: `plc-badge plc-badge-status is-${status}`,
-			text: this.plugin.i18n.t(`status.${status}`),
-			attr: { "aria-label": this.plugin.i18n.t("banner.cycleStatus") },
-		});
-		statusButton.addEventListener("click", () => void this.cycleStatus(file, status));
+		// Timeline and system notes are structure, not story: no status to cycle.
+		if (tracksStatus(typeId)) {
+			const status = isStatus(frontmatter.status) ? frontmatter.status : "draft";
+			const statusButton = rowEl.createEl("button", {
+				cls: `plc-badge plc-badge-status is-${status}`,
+				text: this.plugin.i18n.t(`status.${status}`),
+				attr: { "aria-label": this.plugin.i18n.t("banner.cycleStatus") },
+			});
+			statusButton.addEventListener("click", () => void this.cycleStatus(file, status));
+		}
 
 		const version = asString(frontmatter.version);
 		const versionName = asString(frontmatter["version-name"]);

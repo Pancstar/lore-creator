@@ -32,13 +32,22 @@ function box(root: SVGElement, x: number, y: number, w: number, h: number, label
 	);
 }
 
+/**
+ * Marker ids live in one document namespace, so two diagrams (or two guide
+ * tabs) sharing an id would borrow each other's arrowheads. Each diagram
+ * gets its own id; `arrow` uses the one its `arrowHead` just made.
+ */
+let headCounter = 0;
+let currentHead = "plc-gd-head-0";
+
 function arrow(root: SVGElement, x1: number, y1: number, x2: number, y2: number) {
-	root.appendChild(svg("line", { x1, y1, x2, y2, class: "plc-gd-arrow", "marker-end": "url(#plc-gd-head)" }));
+	root.appendChild(svg("line", { x1, y1, x2, y2, class: "plc-gd-arrow", "marker-end": `url(#${currentHead})` }));
 }
 
 function arrowHead(root: SVGElement) {
+	currentHead = `plc-gd-head-${++headCounter}`;
 	const defs = svg("defs");
-	const marker = svg("marker", { id: "plc-gd-head", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" });
+	const marker = svg("marker", { id: currentHead, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" });
 	marker.appendChild(svg("path", { d: "M0 0 L10 5 L0 10 z", class: "plc-gd-head" }));
 	defs.appendChild(marker);
 	root.appendChild(defs);
