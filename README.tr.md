@@ -26,14 +26,15 @@
 
 <br/>
 
-<img src="docs/images/timeline.png" alt="Dallanan zaman çizgisi tuvali: iki akış şeridi, birleşen bir hat ve zamanı olmayan notlar için ayrı şerit" width="900" />
+<img src="docs/images/tr/timeline.png" alt="Örnek hikâyenin zaman çizgisi: Mira ve Köy akışları, dört yıl boyunca dallanan ve birleşen olaylar" width="900" />
 
 <sub>🕒 Zaman çizgisi tuvali — akışlar şerit, zaman yatay eksen, dallanmalar eğri çizgi</sub>
 
 <br/><br/>
 
-> **Durum — erken ama tamam.** Aşağıdaki her özellik çalışıyor.
-> 1.0'a kadar arayüzler değişebilir, frontmatter şeması henüz dondurulmadı.
+> **Durum — 0.9.4, özellikler tamam.** Aşağıdaki her özellik çalışıyor ve
+> mümkün olan yerlerde birim testleriyle korunuyor. Frontmatter şeması 1.0'a kadar
+> değişebilir.
 
 </div>
 
@@ -116,9 +117,10 @@ flowchart TD
 | 🗂️ | **Türler ve varlıklar** | Karakter, tür, mekân, fraksiyon, nesne, olay — kodda değil, bir notta tanımlı |
 | ⚖️ | **Yasalar** | Evren fiziği ve onu çiğneyen varlıklar, iki yönlü bağlı |
 | 💡 | **Terfi edilebilen taslaklar** | Yeri olmayan fikirler için raf; hak ettiğinde gerçek nota dönüşür |
-| 🧭 | **Gezinme** | Her notun altında nereye bağlandığını gösteren çubuk ve önizleme haritası |
-| 📊 | **Pano ve tutarlılık** | Sayılar, yarım kalan her şey ve uyarı amaçlı rapor |
+| 🧭 | **Gezinme** | Her notun üstünde bir şerit, altında nereye bağlandığını gösteren çubuk ve harita |
+| 📊 | **Pano ve tutarlılık** | Sayılar, yarım kalan her şey ve 15 çeşit kontrollü, uyarı amaçlı rapor |
 | 🔍 | **Arama ve dışa aktarma** | Alanlara göre süz, seçtiklerinden tek Markdown dokümanı üret |
+| ⌨️ | **Klavye ve dokunmatik** | Zaman çizgisinde oklarla gez, iki parmakla yakınlaştır, her pencerede Enter gönderir |
 | 📖 | **Eklenti içi rehber** | Obsidian içinde sade bir gezinti; SSS ve kurcalanacak örnek bir hikâyeyle |
 
 ### 🌿 Dallanan zaman çizgisi tuvali
@@ -165,6 +167,15 @@ flowchart LR
   yakınlaştırır, `0` sığdırır, `/` arar. Dokunmatikte iki parmakla yakınlaştır.
 - Paralel bir zaman çizgisi ana çizgiden nerede ayrıldığını ve o anı bir
   işaretle gösterir.
+- Tuvalde emojinin yanında Lucide ikonları da kullanılabilir.
+
+<div align="center">
+
+<img src="docs/images/tr/timeline-search.png" alt="Zaman çizgisinde Mira araması: eşleşen notlar çerçevelenir, geçerli sonuç parlar, gerisi soluklaşır" width="900" />
+
+<sub>🔍 “Mira” araması — sonuçlar çerçevelenir, geçerli olan parlar, gerisi soluklaşır; hiçbir şey yer değiştirmez</sub>
+
+</div>
 
 ### 📝 Hikayeyi yeniden şekillendiren sürümler
 
@@ -203,7 +214,9 @@ bunlar olmasa eski taslağa dönmek, hepsini tek tek hatırlayıp çevirmek deme
 > [!NOTE]
 > Dosya taşıyan her işlemin önünde, ilgili yolları tek tek yazan bir onay
 > penceresi vardır; sıralama, mevcut içerik yeni yerine ulaşmadan hiçbir şeyin
-> üzerine yazılmayacak şekilde kurulmuştur.
+> üzerine yazılmayacak şekilde kurulmuştur. Eklentinin yazdığı kayıtlar
+> (`version-of`, sürüm setleri, terfiler) yalnız tek bir notu gösteren bağlantı
+> metniyle yazılır; farklı klasörlerdeki aynı adlı notlar asla karışmaz.
 
 ### 📅 Kendi zaman sistemin
 
@@ -225,6 +238,14 @@ değiştirir; canlı bir örnek gösterir ve geçersiz bir değer kaydedilmeden 
 uyarır. Tarihi olan notlar varken bir birimdeki gün sayısını değiştirirsen önce
 sorar: bu notları her biri aynı günde kalacak şekilde taşı ya da sayıları
 olduğu gibi bırak. Taşıma ya tarihli notların hepsine uygulanır ya da hiçbirine.
+
+<div align="center">
+
+<img src="docs/images/tr/time-editor.png" alt="Zaman sistemi düzenleyicisi: ad, birim, bir birimdeki gün sayısı, düzensiz zaman ve Dünya yıllarıyla bağ; altta canlı bir örnek" width="460" />
+
+<sub>📅 Zaman sistemi düzenleyicisi — örnek satırı bir tarihin nasıl saklanıp okunacağını gösterir</sub>
+
+</div>
 
 ### 🗂️ Türler ve varlıklar
 
@@ -260,9 +281,9 @@ flowchart LR
 
 <div align="center">
 
-<img src="docs/images/laws.png" alt="Yasalar görünümü: üstte evren geneli yasalar, altta varlığa özel olanlar; her biri kime tabi olduğunu ve kimin çiğnediğini gösterir" width="420" />
+<img src="docs/images/tr/laws.png" alt="Yasalar görünümü: “Fener asla sönmez” yasası; onu Tobin ve yağı çaldığı olay çiğniyor" width="460" />
 
-<sub>⚖️ Üstte evren geneli, altta varlığa özel — her yasa kimin tabi olduğunu ve kimin çiğnediğini gösterir</sub>
+<sub>⚖️ Her yasa kimin tabi olduğunu ve kimin çiğnediğini gösterir</sub>
 
 </div>
 
@@ -274,24 +295,57 @@ türünü ve klasörünü seç, taslağın metnini kendinde mi tutacağını yok
 devredeceğini mi belirle. Her iki durumda da taslak yaşamaya devam eder ve iki
 not birbirini gösterir.
 
-### 🧭 Gezinme
+### 🧭 Şerit ve gezinme
 
-Her notun altında nereye bağlandığını gösteren bir çubuk. Parçalar çoğu zaman
-birden fazla yere bağlanır, o yüzden her hedefin kendi düğmesi olur. Üzerine
-gelince hedef, tüm zaman çizgisini ya da sadece bir adım ötesini gösterebilen
-bir haritada belirir — harita sabitlenebilir.
+Her lore notunun üstünde bir **şerit** durur — simgesi, türü, durumu (tıklayınca
+değişir), sürümü ve zamandaki yeri (tıklayınca değiştirilir) — altında da nereye
+bağlandığını gösteren bir **çubuk**. Parçalar çoğu zaman birden fazla yere
+bağlanır, o yüzden her hedefin kendi düğmesi olur. Üzerine gelince hedef, tüm
+zaman çizgisini ya da sadece bir adım ötesini gösterebilen bir haritada belirir —
+harita sabitlenebilir.
+
+<div align="center">
+
+<img src="docs/images/tr/note.png" alt="Şeridi (Olay, Taslak, v2, Yıl 4), köşedeki haritası ve altındaki gezinme çubuğuyla bir not" width="900" />
+
+<sub>🧭 Üstte şerit, köşede harita, altta geri ve ileri yol</sub>
+
+</div>
 
 Boş bir `next` alanı, hattın orada bittiği anlamına gelir. Yerini doldurmak için
-hiçbir şey uydurulmaz.
+hiçbir şey uydurulmaz. Arşivlenmiş bir sürüm açıldığında bunun yerine ince bir
+çubuk ve aktif sürüme dönen bir düğme çıkar.
 
 ### 📊 Pano, arama ve dışa aktarma
 
 | | | |
 |---|---|---|
 | 📊 | **Pano** | Türe göre sayılar, yarım kalan her şey (yarısı yazılmışlar dokunulmamışların üstünde) ve tutarlılık raporu |
-| 🩺 | **Tutarlılık** | Kırık bağlantılar, tek taraflı bağlar, zamanca geriye giden bağlantılar, zaman çizgisinde olup tarihi olmayan notlar. **Sadece uyarı amaçlı:** hiçbir şeyi düzeltmez, hiçbir işlemi engellemez; çünkü bulguların çoğu hata değil, devam eden iştir |
+| 🩺 | **Tutarlılık** | On beş çeşit kontrol (aşağıda), her biri bir çiple kapatılabilir. **Sadece uyarı amaçlı:** hiçbir şeyi düzeltmez, hiçbir işlemi engellemez; çünkü bulguların çoğu hata değil, devam eden iştir |
 | 🔍 | **Arama** | Türe, duruma, zaman çizgisine, akışa ve zaman aralığına göre süzer. Obsidian'ın kendi araması kelimeleri zaten buluyor; bu, *"ana evrende yarım kalmış tüm karakterler"* sorusunu cevaplıyor |
 | 📤 | **Dışa aktarma** | Seçtiğin bölümlerden tek bir Markdown dokümanı. Notlarda gizlilik bayrağının olmamasının sebebi budur: okuyucunun ne göreceği paylaşırken belirlenir, her notta sonsuza kadar saklanmaz |
+
+<table><tr><td width="50%" valign="top">
+
+<img src="docs/images/tr/dashboard.png" alt="Pano: türe göre sayılar, örnek rozetli yarım kalanlar listesi ve tür çipleriyle tutarlılık raporu ile sahipsiz notlar" width="420" />
+
+</td><td valign="top">
+
+**Tutarlılık raporunun kontrolleri**
+
+- **Bağlantılar:** kırık `next`/`prev`, diğer alanlardaki kırık bağlantılar,
+  tek taraflı `next`/`prev`, kendine bağlanan not
+- **Hikâye:** zamanca geriye giden bağlantılar, `next` döngüleri, aynı akışta
+  çakışan iki dönem, zaman çizgisinde olup zamanı olmayan notlar
+- **Yapı:** bilinmeyen zaman çizgisi, akış ya da tür, hiçbir notun bağlanmadığı
+  notlar, birden çok notun paylaştığı adı gösteren eski kayıtlar
+- **Yasalar:** yasa olmayan bir hedef, geçerli olmadığı zaman çizgisinde
+  çiğnenen yasa
+
+Her çeşidin bir çipi var; kapatılan çeşitler sayıya da girmez. Obsidian vault'taki
+bağlantıları okumayı bitirene kadar sahipsiz kontrolü bekler ve bunu söyler.
+
+</td></tr></table>
 
 ### 📖 Eklenti içi rehber
 
@@ -312,6 +366,14 @@ silinmez). Ondan kopyaladığın sayfalar senin kalır.
 
 Rehberi soldaki kitap simgesinden, **Rehberi aç** komutundan ya da
 **Ayarlar → Yardım** bölümünden aç.
+
+<div align="center">
+
+<img src="docs/images/tr/guide.png" alt="Rehberin zaman çizgisi bölümü: solda okundu işaretli bölüm menüsü, çamaşır ipi şeması ve Zaman çizgisini aç düğmesi" width="700" />
+
+<sub>📖 Her ekranda bir bölüm; bir şema ve anlatılan adımı yapan bir düğme</sub>
+
+</div>
 
 ---
 
@@ -338,6 +400,8 @@ Komut paletinden **Bu vault'u kur** komutunu çalıştır. Görünümlerin okudu
 klasörleri, şablonları ve tür kaydını oluşturur — önce oluşturacağı ağacı
 gösterir ve var olan bir dosyanın üzerine asla yazmaz. Bir adımda zaman
 sistemini sorar: birim adı, birim başına gün ve isteğe bağlı Dünya yılı bağı.
+Önce dosyalar, en son ayarlar yazılır; yarıda kalan bir kurulum hiçbir şeyi
+değiştirmez, yeniden çalıştırınca yalnız eksikleri tamamlar.
 
 ```
 📁 <vault>
@@ -456,6 +520,11 @@ flowchart LR
 | 🔍 | Evrende ara | Metne göre değil, alanlara göre arar |
 | 📤 | Evreni dışa aktar | Tek bir Markdown dokümanı üretir |
 
+**Zaman çizgisinde:** <kbd>Tab</kbd> notlara ulaşır, ok tuşları aralarında gezer,
+<kbd>Enter</kbd> açar, <kbd>+</kbd> <kbd>−</kbd> yakınlaştırır, <kbd>0</kbd>
+sığdırır, <kbd>/</kbd> aramaya gider. **Pencerelerde:** bir metin alanında
+<kbd>Enter</kbd> ana düğmeye basar.
+
 ---
 
 ## ⚙️ Ayarlar
@@ -491,6 +560,7 @@ veri, arayüz değil.
 npm install
 npm run dev     # esbuild izler — kaydettikçe dist/ yeniden üretilir
 npm run lint    # eslint-plugin-obsidianmd ile eslint
+npm test        # vitest birim testleri (zaman, bağlantılar, denetim, ayarlar…)
 npm run build   # tip kontrolü, lint, sonra küçültülmüş dist/main.js
 ```
 
@@ -517,7 +587,7 @@ Obsidian eklentileri kendiliğinden yeniden yüklemez.
 alır; onsuz her değişiklikten sonra *Reload app without saving* komutunu
 çalıştır.
 
-Her push ve pull request CI'da `npm ci` ve `npm run build` çalıştırır.
+Her push ve pull request CI'da `npm ci`, `npm run build` ve `npm test` çalıştırır.
 
 Sürümler, başında `v` olmadan tam olarak sürüm numarasıyla etiketlenir. Etiketi
 push etmek eklentiyi derler ve `dist/` içindeki `main.js`, `manifest.json`,

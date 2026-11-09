@@ -1,12 +1,16 @@
 # Screenshots
 
-Images referenced from the project README. Keep the filenames stable so the
-links do not break.
+Images referenced from the project READMEs: `en/` for `README.md`, `tr/` for
+`README.tr.md`. Both sets show the built-in example story (*The Lantern
+Keepers* / *Fener Bekçileri*) in the dark theme. Keep the filenames the same
+in both folders so the links do not break.
 
 | File | Shows |
 |---|---|
-| `timeline.png` | The timeline canvas with branching and merging threads |
-| `banner.png` | A note with its banner, and the navigation bar underneath |
-| `versions.png` | The version list for a note that has several |
+| `timeline.png` | The timeline canvas: two flows, branching and converging events |
+| `timeline-search.png` | The same timeline while searching — hits outlined, the rest dimmed |
+| `note.png` | A note with its banner, the map in the corner and the navigation bar underneath |
+| `guide.png` | The built-in guide's timeline chapter |
+| `dashboard.png` | The dashboard: counts, unfinished work, the consistency report with kind chips |
 | `laws.png` | The laws view, including who breaks a law |
-| `dashboard.png` | The dashboard: counts, unfinished work, consistency |
+| `time-editor.png` | The time system editor with a live example |

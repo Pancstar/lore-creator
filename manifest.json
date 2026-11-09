@@ -1,7 +1,7 @@
 {
 	"id": "lore-creator",
 	"name": "Lore Creator",
-	"version": "0.9.3",
+	"version": "0.9.4",
 	"minAppVersion": "1.13.0",
 	"description": "Design fictional universes: branching timelines, versioned story fragments, custom time systems and structured worldbuilding entities.",
 	"author": "PancstaR",

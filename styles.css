@@ -466,6 +466,47 @@ button.plc-badge {
 	display: none;
 }
 
+/* Phone with Obsidian's floating header and navbar. Obsidian clears the header
+   inside a note's scroller, not around the view, so the banner (which sits
+   above the scroller) is moved below the header and the scroller's own top
+   space shrinks to match. The bottom bar reaches past the floating navbar so
+   its buttons stay clear of it. */
+.is-phone.is-floating-nav .mod-root .view-content.plc-lore-note > .plc-banner,
+.is-phone.auto-full-screen .mod-root .view-content.plc-lore-note > .plc-banner {
+	margin-top: calc(var(--safe-area-inset-top, 0px) + var(--view-header-height, 0px) + var(--size-2-3));
+	margin-inline: var(--size-4-2);
+}
+
+.is-phone.is-floating-nav .mod-root .view-content.plc-lore-note .markdown-reading-view > .markdown-preview-view,
+.is-phone.is-floating-nav .mod-root .view-content.plc-lore-note .markdown-source-view > .cm-editor > .cm-scroller,
+.is-phone.auto-full-screen .mod-root .view-content.plc-lore-note .markdown-reading-view > .markdown-preview-view,
+.is-phone.auto-full-screen .mod-root .view-content.plc-lore-note .markdown-source-view > .cm-editor > .cm-scroller {
+	padding-top: var(--size-4-2);
+}
+
+.is-phone.is-floating-nav .plc-navbar,
+.is-phone.auto-full-screen .plc-navbar {
+	padding-bottom: calc(var(--size-2-3) + var(--view-bottom-spacing, 0px) + var(--size-2-2));
+}
+
+.is-phone.is-floating-nav .plc-has-navigator .cm-content,
+.is-phone.is-floating-nav .plc-has-navigator .markdown-preview-section,
+.is-phone.auto-full-screen .plc-has-navigator .cm-content,
+.is-phone.auto-full-screen .plc-has-navigator .markdown-preview-section {
+	padding-bottom: calc(4rem + var(--view-bottom-spacing, 0px));
+}
+
+/* Phone: the banner already names the timeline and flow, so the bar drops it
+   and lets the previous/next buttons shorten instead of overlapping. */
+.is-phone .plc-navbar:not(.is-archive) .plc-navbar-context {
+	display: none;
+}
+
+.is-phone .plc-navbar-button {
+	min-width: 0;
+	max-width: 100%;
+}
+
 .plc-timeline-divergence {
 	padding: var(--size-2-1) var(--size-4-3);
 	font-size: var(--font-ui-smaller);
