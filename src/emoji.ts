@@ -270,6 +270,11 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
 
 const ALL_ENTRIES: EmojiEntry[] = EMOJI_CATEGORIES.flatMap((category) => category.entries);
 
+/** The words shown when hovering an emoji, in the interface language. */
+export function emojiTooltip(entry: EmojiEntry, language: "tr" | "en"): string {
+	return language === "tr" ? entry.tr : entry.en;
+}
+
 export function searchEmoji(query: string): EmojiEntry[] {
 	const raw = query.trim();
 	if (!raw) return ALL_ENTRIES;

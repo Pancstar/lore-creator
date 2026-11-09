@@ -1,6 +1,6 @@
 import { App, TFile, normalizePath } from "obsidian";
-import { linkTarget } from "../links";
-import { VersionStore } from "./store";
+import { isAmbiguousLink, linkTarget, recordLink, sharedBasenames } from "../links";
+import { VersionStore, settledMetadata } from "./store";
 import { asString } from "../frontmatter";
 import { loreFiles } from "../scope";
 import { buildVersionSetsNote } from "../setup/defaults";
@@ -104,6 +104,63 @@ export class VersionSetStore {
 		return this.list().find((set) => set.id === id);
 	}
 
+	/**
+	 * Entries naming their note by a name several notes share (sets captured
+	 * before v0.9.0). Applying them as they are could switch the wrong note.
+	 */
+	ambiguousNotes(set: VersionSet): string[] {
+		const shared = sharedBasenames(this.app);
+		return [...new Set(set.entries.map((entry) => entry.note))].filter((note) =>
+			isAmbiguousLink(this.app, note, shared),
+		);
+	}
+
+	/**
+	 * Makes every entry of one set that names `note` name `file` exactly and
+	 * returns the new link text. The change is made on the note as it is on
+	 * disk, not on Obsidian's index, so a fix made a moment earlier is kept
+	 * even when the index has not caught up.
+	 */
+	async setEntryNote(setId: string, note: string, file: TFile): Promise<string> {
+		const exact = recordLink(this.app, file);
+		const target = this.file;
+		if (!target) throw new Error("version sets note missing");
+
+		const settled = settledMetadata(this.app, target);
+		await this.app.fileManager.processFrontMatter(target, (frontmatter: Record<string, unknown>) => {
+			const sets: unknown = frontmatter.sets;
+			if (!Array.isArray(sets)) return;
+			for (const set of sets) {
+				const record = set as Record<string, unknown> | null;
+				if (!record || asString(record.id).trim() !== setId || !Array.isArray(record.entries)) continue;
+				for (const entry of record.entries as unknown[]) {
+					const item = entry as Record<string, unknown> | null;
+					if (item && linkTarget(item.note) === note) item.note = `[[${exact}]]`;
+				}
+			}
+		});
+		await settled;
+		return exact;
+	}
+
+	/**
+	 * Whether applying the set should first settle old shared-name records:
+	 * an entry naming a shared name, or an old archive that may belong to a
+	 * note the set switches. Until they are settled the plan may be wrong.
+	 */
+	needsSettling(set: VersionSet): boolean {
+		if (this.ambiguousNotes(set).length > 0) return true;
+		return set.entries.some((entry) => {
+			const note = this.noteFor(entry);
+			return note !== null && this.versions.ambiguousArchivesNamed(note.basename).length > 0;
+		});
+	}
+
+	/** The note a set entry switches, as `plan` resolves it. */
+	noteFor(entry: VersionSetEntry): TFile | null {
+		return this.app.metadataCache.getFirstLinkpathDest(entry.note, this.setsPath);
+	}
+
 	/** Every note in the vault that has more than one version. */
 	versionedNotes(): TFile[] {
 		const notes: TFile[] = [];
@@ -117,7 +174,7 @@ export class VersionSetStore {
 	/** Records the versions currently active, so the author can return to them. */
 	async capture(name: string): Promise<VersionSet> {
 		const entries: VersionSetEntry[] = this.versionedNotes().map((file) => ({
-			note: this.app.metadataCache.fileToLinktext(file, this.setsPath, true),
+			note: recordLink(this.app, file),
 			version: this.versions.info(file).number,
 		}));
 
@@ -147,7 +204,7 @@ export class VersionSetStore {
 		let unchanged = 0;
 
 		for (const entry of set.entries) {
-			const active = this.app.metadataCache.getFirstLinkpathDest(entry.note, this.setsPath);
+			const active = this.noteFor(entry);
 			if (!active) {
 				missing.push(entry.note);
 				continue;

@@ -2,8 +2,11 @@ import { App, Modal, Notice, Setting, TFile, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import { VersionEntry, VersionError } from "../versions/store";
 import { ConfirmModal } from "./confirm";
+import { askOwner } from "./resolveOwner";
 import { LiveRefresh } from "./liveRefresh";
 import { enterSubmits } from "./enterSubmits";
+import { applyLang } from "../i18n";
+import { linkTargets } from "../links";
 
 /**
  * Lists a note's versions and performs the file moves behind them. Every action
@@ -12,6 +15,9 @@ import { enterSubmits } from "./enterSubmits";
 export class VersionMenuModal extends Modal {
 	private active: TFile;
 	private live = new LiveRefresh(this.app, () => this.renderBody());
+	/** An old record is being settled with the author; other actions wait. */
+	private resolving = false;
+	private closed = false;
 
 	constructor(
 		app: App,
@@ -23,6 +29,7 @@ export class VersionMenuModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.plugin.i18n.t("version.title"));
 		this.contentEl.addClass("plc-versions");
@@ -44,6 +51,18 @@ export class VersionMenuModal extends Modal {
 
 		for (const entry of entries) {
 			this.renderEntry(listEl, entry, entries.length);
+		}
+
+		// Old archives of this name that Obsidian filed under another note of
+		// the same name never appear above; offer to settle whose they are.
+		const listed = new Set(entries.map((entry) => entry.file.path));
+		const hidden = this.plugin.versions
+			.ambiguousArchivesNamed(this.active.basename)
+			.filter((archive) => !listed.has(archive.path));
+		if (hidden.length > 0) {
+			new Setting(this.contentEl)
+				.setDesc(t("owner.hidden", String(hidden.length), this.active.basename))
+				.addButton((button) => button.setButtonText(t("owner.fix")).onClick(() => this.settleHidden(hidden)));
 		}
 
 		new Setting(this.contentEl).addButton((button) =>
@@ -125,15 +144,15 @@ export class VersionMenuModal extends Modal {
 					confirmLabel: t("version.create"),
 					cancelLabel: t("common.cancel"),
 				},
-				() => void this.runCreate(name, note),
+				() => void this.runCreate(name, note, preview.archivePath),
 			).open();
 		}).open();
 	}
 
-	private async runCreate(name: string, note: string) {
+	private async runCreate(name: string, note: string, expectedPath: string) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		try {
-			const ran = await this.live.run(() => this.plugin.versions.createVersion(this.active, name, note));
+			const ran = await this.live.run(() => this.plugin.versions.createVersion(this.active, name, note, expectedPath));
 			if (ran) new Notice(t("version.created"));
 		} catch (error) {
 			this.reportFailure(error);
@@ -141,8 +160,21 @@ export class VersionMenuModal extends Modal {
 	}
 
 	private confirmSwitch(entry: VersionEntry) {
+		if (this.live.busy || this.resolving) return;
+		// An old record naming a shared name may have put another note's version
+		// on this list: settle whose it is before anything moves.
+		const candidates = this.plugin.versions.ownerCandidates(entry.file);
+		if (candidates.length > 0) {
+			this.resolving = true;
+			void this.resolveOwner(entry, candidates).finally(() => (this.resolving = false));
+			return;
+		}
+		this.showSwitchConfirm(entry);
+	}
+
+	private showSwitchConfirm(entry: VersionEntry) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
-		if (this.live.busy) return;
+		if (this.live.busy || this.closed) return;
 		const preview = this.plugin.versions.previewSwitch(this.active, entry.file);
 		const current = this.plugin.versions.info(this.active);
 
@@ -158,14 +190,62 @@ export class VersionMenuModal extends Modal {
 				confirmLabel: t("version.switch"),
 				cancelLabel: t("common.cancel"),
 			},
-			() => void this.runSwitch(entry),
+			() => void this.runSwitch(entry, preview.archivePath),
 		).open();
 	}
 
-	private async runSwitch(entry: VersionEntry) {
+	/** Asks whose an old archive is and records the answer; null when backed out. */
+	private async askAndFix(archive: TFile, candidates: TFile[]): Promise<TFile | null> {
+		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		const target = linkTargets(this.app.metadataCache.getFileCache(archive)?.frontmatter?.["version-of"])[0] ?? "";
+		const owner = await askOwner(this.app, {
+			title: t("owner.title"),
+			body: t("owner.archive.body", archive.path, target),
+			candidates,
+			chooseLabel: t("owner.choose"),
+			cancelLabel: t("common.cancel"),
+		});
+		if (!owner) return null;
+
+		try {
+			await this.plugin.versions.setOwner(archive, owner);
+		} catch (error) {
+			console.error("Lore Creator: could not fix the version record", error);
+			new Notice(t("owner.fixFailed"));
+			return null;
+		}
+		return owner;
+	}
+
+	private async resolveOwner(entry: VersionEntry, candidates: TFile[]) {
+		const owner = await this.askAndFix(entry.file, candidates);
+		if (!owner || this.closed) return;
+		if (owner.path !== this.active.path) {
+			new Notice(this.plugin.i18n.t("owner.otherNote", owner.path), 8000);
+			return;
+		}
+		// Settled: straight to the switch, without asking again from an index
+		// that may not have caught up yet.
+		this.showSwitchConfirm(entry);
+	}
+
+	private settleHidden(archives: TFile[]) {
+		if (this.live.busy || this.resolving) return;
+		this.resolving = true;
+		void (async () => {
+			for (const archive of archives) {
+				const candidates = this.plugin.versions.ownerCandidates(archive);
+				if (candidates.length === 0) continue;
+				if (!(await this.askAndFix(archive, candidates)) || this.closed) return;
+			}
+			if (!this.closed) this.renderBody();
+		})().finally(() => (this.resolving = false));
+	}
+
+	private async runSwitch(entry: VersionEntry, expectedPath: string) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		try {
-			const ran = await this.live.run(() => this.plugin.versions.switchTo(this.active, entry.file));
+			const ran = await this.live.run(() => this.plugin.versions.switchTo(this.active, entry.file, expectedPath));
 			if (ran) new Notice(t("version.switched", `v${entry.number}`));
 		} catch (error) {
 			this.reportFailure(error);
@@ -215,6 +295,7 @@ export class VersionMenuModal extends Modal {
 	}
 
 	onClose() {
+		this.closed = true;
 		this.live.stop();
 		this.contentEl.empty();
 	}
@@ -234,6 +315,7 @@ class NewVersionModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("version.create"));

@@ -3,6 +3,7 @@ import type LorePlugin from "../main";
 import { resolveTargets } from "../links";
 import { Minimap, MinimapMode } from "./minimap";
 import { asString } from "../frontmatter";
+import { applyLang } from "../i18n";
 
 const BAR_CLASS = "plc-navbar";
 const MAP_CLASS = "plc-minimap";
@@ -83,9 +84,11 @@ export class Navigator {
 		view.contentEl.addClass(HOST_CLASS);
 
 		const mapEl = view.contentEl.createDiv({ cls: MAP_CLASS });
+		applyLang(mapEl);
 		this.syncMap(mapEl, file, null);
 
 		const barEl = view.contentEl.createDiv({ cls: BAR_CLASS });
+		applyLang(barEl);
 		this.buildSide(barEl, file, mapEl, prev, "prev");
 		this.buildContext(barEl, frontmatter, timeline);
 		this.buildSide(barEl, file, mapEl, next, "next");
@@ -143,6 +146,7 @@ export class Navigator {
 	private buildArchiveBar(host: HTMLElement, file: TFile, frontmatter: Record<string, unknown>) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		const barEl = host.createDiv({ cls: `${BAR_CLASS} is-archive` });
+		applyLang(barEl);
 
 		const version = asString(frontmatter.version).trim();
 		const name = asString(frontmatter["version-name"]).trim();

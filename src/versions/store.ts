@@ -1,7 +1,7 @@
 import { App, TFile, normalizePath } from "obsidian";
-import { linkTarget, linkTo } from "../links";
+import { isAmbiguousLink, linkCandidates, linkTarget, recordLink, sharedBasenames } from "../links";
 import { asString } from "../frontmatter";
-import { loreFiles } from "../scope";
+import { isTemplate, loreFiles } from "../scope";
 
 export interface VersionInfo {
 	number: number;
@@ -16,6 +16,24 @@ export interface VersionEntry extends VersionInfo {
 }
 
 export class VersionError extends Error {}
+
+/**
+ * Resolves once Obsidian has re-read `file` after a write, so the next lookup
+ * sees the new frontmatter. Gives up after two seconds rather than hang.
+ */
+export function settledMetadata(app: App, file: TFile): Promise<void> {
+	return new Promise((resolve) => {
+		const done = () => {
+			window.clearTimeout(timer);
+			app.metadataCache.offref(ref);
+			resolve();
+		};
+		const ref = app.metadataCache.on("changed", (changed) => {
+			if (changed.path === file.path) done();
+		});
+		const timer = window.setTimeout(done, 2000);
+	});
+}
 
 /** Version ids are written as `v3`; anything else counts as the first version. */
 function parseNumber(value: unknown): number {
@@ -73,6 +91,42 @@ export class VersionStore {
 	}
 
 	/**
+	 * The notes an archive's record could mean when it names its note by a name
+	 * several notes share (records written before v0.9.0). Obsidian would pick
+	 * one of them, possibly the wrong one, so the author is asked instead.
+	 * Empty when the record names exactly one note.
+	 */
+	ownerCandidates(archive: TFile): TFile[] {
+		const target = linkTarget(this.frontmatter(archive)["version-of"]);
+		if (!target || !isAmbiguousLink(this.app, target)) return [];
+		return linkCandidates(this.app, target).filter((file) => !isTemplate(file) && !this.isArchived(file));
+	}
+
+	/**
+	 * Old archives whose record names `name` bare while several notes carry
+	 * that name. Obsidian files each under one of them, so some may sit under
+	 * the wrong note and never show up in the right one's list.
+	 */
+	ambiguousArchivesNamed(name: string): TFile[] {
+		const wanted = name.toLowerCase();
+		const shared = sharedBasenames(this.app);
+		return loreFiles(this.app).filter((file) => {
+			const target = linkTarget(this.frontmatter(file)["version-of"]);
+			return target.toLowerCase() === wanted && isAmbiguousLink(this.app, target, shared);
+		});
+	}
+
+	/** Rewrites an archive's record so it names `owner` and nothing else. */
+	async setOwner(archive: TFile, owner: TFile): Promise<void> {
+		const settled = settledMetadata(this.app, archive);
+		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
+			frontmatter["version-of"] = `[[${recordLink(this.app, owner)}]]`;
+		});
+		await settled;
+		this.invalidate();
+	}
+
+	/**
 	 * Archives are discovered by following `version-of` rather than by reading a
 	 * list off the active note, so the two can never drift apart.
 	 */
@@ -114,9 +168,34 @@ export class VersionStore {
 		return this.list(file).length > 1;
 	}
 
-	private archivePath(baseName: string, info: VersionInfo): string {
+	/**
+	 * `Mira — v2.md`, unless another note is called Mira too: then the note's
+	 * folder tells the two apart (`Mira (Characters) — v2.md`), and a number
+	 * when there is no folder name to use or it is taken as well. A path that
+	 * already exists is never chosen.
+	 */
+	private archivePath(active: TFile, info: VersionInfo): string {
 		const suffix = info.name.trim() ? ` ${info.name.trim()}` : "";
-		return normalizePath(`${this.versionsFolder}/${baseName} — v${info.number}${suffix}.md`);
+		const pathFor = (label: string) =>
+			normalizePath(`${this.versionsFolder}/${label} — v${info.number}${suffix}.md`);
+		// Windows and macOS file names ignore case, so neither does this check.
+		const taken = new Set(this.app.vault.getMarkdownFiles().map((file) => file.path.toLowerCase()));
+		const free = (path: string) => !taken.has(path.toLowerCase());
+
+		const base = active.basename;
+		const plain = pathFor(base);
+		const shared = (sharedBasenames(this.app).get(base.toLowerCase()) ?? 0) > 1;
+		if (!shared && free(plain)) return plain;
+
+		const folder = active.parent && !active.parent.isRoot() ? active.parent.name : "";
+		if (folder) {
+			const withFolder = pathFor(`${base} (${folder})`);
+			if (free(withFolder)) return withFolder;
+		}
+		for (let n = 2; ; n++) {
+			const numbered = pathFor(`${base} (${n})`);
+			if (free(numbered)) return numbered;
+		}
 	}
 
 	private async ensureFolder() {
@@ -130,7 +209,7 @@ export class VersionStore {
 	previewCreate(active: TFile): { archivePath: string; nextNumber: number } {
 		const info = this.info(active);
 		const highest = this.list(active).reduce((max, entry) => Math.max(max, entry.number), 0);
-		return { archivePath: this.archivePath(active.basename, info), nextNumber: highest + 1 };
+		return { archivePath: this.archivePath(active, info), nextNumber: highest + 1 };
 	}
 
 	/**
@@ -138,14 +217,16 @@ export class VersionStore {
 	 * own path as the next version, so the author edits forward from what they
 	 * already had rather than starting from a blank note.
 	 */
-	async createVersion(active: TFile, name: string, note: string): Promise<void> {
+	async createVersion(active: TFile, name: string, note: string, expectedPath?: string): Promise<void> {
 		if (this.isArchived(active)) {
 			throw new VersionError("archived");
 		}
 
 		const { archivePath, nextNumber } = this.previewCreate(active);
-		if (this.app.vault.getFileByPath(archivePath)) {
-			throw new VersionError(archivePath);
+		// The dialog named a path; if something has changed since, stop rather
+		// than file the note somewhere the author was not shown.
+		if ((expectedPath && archivePath !== expectedPath) || this.app.vault.getFileByPath(archivePath)) {
+			throw new VersionError(expectedPath ?? archivePath);
 		}
 
 		const content = await this.app.vault.read(active);
@@ -156,7 +237,7 @@ export class VersionStore {
 
 		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${previous.number}`;
-			frontmatter["version-of"] = linkTo(this.app, active, archive.path);
+			frontmatter["version-of"] = `[[${recordLink(this.app, active)}]]`;
 			if (previous.name) frontmatter["version-name"] = previous.name;
 			if (previous.note) frontmatter["version-note"] = previous.note;
 		});
@@ -179,7 +260,7 @@ export class VersionStore {
 
 	/** Describes what `switchTo` would do, for the confirmation dialog. */
 	previewSwitch(active: TFile, target: TFile): { archivePath: string } {
-		return { archivePath: this.archivePath(active.basename, this.info(active)) };
+		return { archivePath: this.archivePath(active, this.info(active)) };
 	}
 
 	/**
@@ -187,12 +268,12 @@ export class VersionStore {
 	 * content is safely on disk in its new home before anything overwrites it:
 	 * a failure partway through leaves a duplicate, never a hole.
 	 */
-	async switchTo(active: TFile, target: TFile): Promise<void> {
+	async switchTo(active: TFile, target: TFile, expectedPath?: string): Promise<void> {
 		if (target.path === active.path) return;
 
-		const archivePath = this.archivePath(active.basename, this.info(active));
-		if (this.app.vault.getFileByPath(archivePath)) {
-			throw new VersionError(archivePath);
+		const archivePath = this.archivePath(active, this.info(active));
+		if ((expectedPath && archivePath !== expectedPath) || this.app.vault.getFileByPath(archivePath)) {
+			throw new VersionError(expectedPath ?? archivePath);
 		}
 
 		const activeContent = await this.app.vault.read(active);
@@ -203,7 +284,7 @@ export class VersionStore {
 		const archive = await this.app.vault.create(archivePath, activeContent);
 		await this.app.fileManager.processFrontMatter(archive, (frontmatter: Record<string, unknown>) => {
 			frontmatter.version = `v${activeInfo.number}`;
-			frontmatter["version-of"] = linkTo(this.app, active, archive.path);
+			frontmatter["version-of"] = `[[${recordLink(this.app, active)}]]`;
 		});
 
 		await this.app.vault.process(active, () => targetContent);

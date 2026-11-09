@@ -6,6 +6,7 @@ import { asStatus } from "../timeline/model";
 import { isUnfinished } from "../status";
 import { loreFiles } from "../scope";
 import { addExampleBadge } from "../guide/badge";
+import { applyLang } from "../i18n";
 
 export const VIEW_TYPE_DASHBOARD = "plc-dashboard";
 
@@ -57,6 +58,7 @@ export class DashboardView extends ItemView {
 	}
 
 	async onOpen() {
+		applyLang(this.containerEl);
 		this.contentEl.addClass("plc-list-view");
 		this.render();
 	}

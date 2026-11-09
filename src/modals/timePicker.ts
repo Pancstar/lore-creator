@@ -12,6 +12,7 @@ import {
 	timeToParts,
 } from "../time";
 import { enterSubmits } from "./enterSubmits";
+import { applyLang } from "../i18n";
 
 export interface TimeValue {
 	time: number | null;
@@ -43,7 +44,6 @@ export class TimePickerModal extends Modal {
 		app: App,
 		private i18n: I18n,
 		private universe: Universe,
-		private language: "tr" | "en",
 		current: TimeValue,
 		private onSubmit: (value: TimeValue) => void,
 		/** Lets the author fix the calendar itself from where they meet it. */
@@ -71,6 +71,7 @@ export class TimePickerModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.i18n.t("time.title"));
 		this.contentEl.addClass("plc-time-picker");
@@ -151,7 +152,7 @@ export class TimePickerModal extends Modal {
 			.addText((text) => {
 				this.labelInput = text.inputEl;
 				text
-					.setValue(this.label || formatLabel(this.start, timeSystem, this.precision, this.language))
+					.setValue(this.label || formatLabel(this.start, timeSystem, this.precision, this.i18n.t("time.dayLabel")))
 					.onChange((value) => {
 						this.label = value;
 						// Once the author edits the label, stop overwriting it.
@@ -237,7 +238,7 @@ export class TimePickerModal extends Modal {
 	private syncLabel() {
 		const timeSystem = this.universe.readTime();
 		if (!this.labelTouched && this.labelInput) {
-			this.label = formatLabel(this.start, timeSystem, this.precision, this.language);
+			this.label = formatLabel(this.start, timeSystem, this.precision, this.i18n.t("time.dayLabel"));
 			this.labelInput.value = this.label;
 		}
 		this.refreshPreview();
@@ -250,7 +251,7 @@ export class TimePickerModal extends Modal {
 		const time = partsToTime(this.start, timeSystem, this.precision);
 		const earth = this.universe.toEarthTime(time, timeSystem);
 		const earthPart = earth === null ? "" : ` · ${this.i18n.t("time.earth")} ${earth}`;
-		const readable = formatTime(time, timeSystem, this.precision, this.language);
+		const readable = formatTime(time, timeSystem, this.precision, this.i18n.t("time.dayLabel"));
 		this.previewEl.setText(`${readable} (${time})${earthPart}`);
 	}
 

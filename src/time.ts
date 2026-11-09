@@ -89,13 +89,14 @@ function pad(value: number): string {
 
 /**
  * Builds the human-readable label stored alongside `time`. Authors are free to
- * overwrite it; this is only the starting point.
+ * overwrite it; this is only the starting point. `dayLabel` is the interface
+ * language's wording for a day, with `{0}` for its number (`time.dayLabel`).
  */
 export function formatLabel(
 	parts: TimeParts,
 	time: Time,
 	precision: TimePrecision,
-	language: "tr" | "en",
+	dayLabel: string,
 ): string {
 	const name = time.timeName.trim();
 	const unit = time.timeUnit.trim();
@@ -103,8 +104,7 @@ export function formatLabel(
 	const head = [name, unit, String(Math.floor(parts.year))].filter((piece) => piece.length > 0).join(" ");
 	if (precision === "year") return head;
 
-	const dayWord = language === "tr" ? "gün" : "day";
-	const dayPart = language === "tr" ? `${parts.day}. ${dayWord}` : `${dayWord} ${parts.day}`;
+	const dayPart = dayLabel.split("{0}").join(String(parts.day));
 	if (precision === "date") return `${head}, ${dayPart}`;
 
 	return `${head}, ${dayPart} ${pad(parts.hour)}:${pad(parts.minute)}`;
@@ -115,9 +115,9 @@ export function formatTime(
 	value: number,
 	time: Time,
 	precision: TimePrecision,
-	language: "tr" | "en",
+	dayLabel: string,
 ): string {
-	return formatLabel(timeToParts(value, time, precision), time, precision, language);
+	return formatLabel(timeToParts(value, time, precision), time, precision, dayLabel);
 }
 
 /**

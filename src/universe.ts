@@ -115,10 +115,10 @@ export class Universe {
 	 */
 	formatTime(
 		time: number,
-		precision: TimePrecision = "year",
-		language: "tr" | "en" = "en",
+		precision: TimePrecision,
+		dayLabel: string,
 		universeTime = this.readTime(),
 	): string {
-		return formatTime(time, universeTime, precision, language);
+		return formatTime(time, universeTime, precision, dayLabel);
 	}
 }

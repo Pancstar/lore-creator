@@ -1,4 +1,5 @@
 import { App, SuggestModal, TFile } from "obsidian";
+import { applyLang } from "../i18n";
 
 /**
  * Shown when a fragment leads to more than one place, which is the normal case
@@ -13,6 +14,11 @@ export class PickTargetModal extends SuggestModal<TFile> {
 	) {
 		super(app);
 		this.setPlaceholder(placeholder);
+	}
+
+	onOpen() {
+		applyLang(this.modalEl);
+		void super.onOpen();
 	}
 
 	getSuggestions(query: string): TFile[] {

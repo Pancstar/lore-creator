@@ -8,6 +8,8 @@ import { SetupModal } from "../setup/wizard";
 import { NewNoteModal } from "../modals/newNote";
 import { VIEW_TYPE_TIMELINE } from "../timeline/view";
 import { VIEW_TYPE_DASHBOARD } from "../views/dashboard";
+import { VIEW_TYPE_RELATIONS } from "../views/relations";
+import { applyLang } from "../i18n";
 
 export const VIEW_TYPE_GUIDE = "plc-guide";
 
@@ -49,6 +51,7 @@ export class GuideView extends ItemView {
 	}
 
 	async onOpen() {
+		applyLang(this.containerEl);
 		this.contentEl.addClass("plc-guide");
 		this.menuEl = this.contentEl.createDiv({ cls: "plc-guide-menu" });
 		this.pageEl = this.contentEl.createDiv({ cls: "plc-guide-page" });
@@ -213,6 +216,9 @@ export class GuideView extends ItemView {
 				return;
 			case "openDashboard":
 				void this.plugin.activateView(VIEW_TYPE_DASHBOARD);
+				return;
+			case "openRelations":
+				void this.plugin.activateView(VIEW_TYPE_RELATIONS);
 				return;
 			case "createExample":
 				confirmCreateExample(this.plugin);

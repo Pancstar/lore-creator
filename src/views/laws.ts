@@ -3,6 +3,7 @@ import type LorePlugin from "../main";
 import { TimelineModel } from "../timeline/model";
 import { Law, collectLaws } from "../lawsModel";
 import { addExampleBadge } from "../guide/badge";
+import { applyLang } from "../i18n";
 
 export const VIEW_TYPE_LAWS = "plc-laws";
 
@@ -33,6 +34,7 @@ export class LawsView extends ItemView {
 	}
 
 	async onOpen() {
+		applyLang(this.containerEl);
 		this.contentEl.addClass("plc-list-view");
 		this.render();
 	}

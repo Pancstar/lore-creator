@@ -69,3 +69,47 @@ describe("linkTo", () => {
 		expect(linkTo(app, file("Act 2/Scene.md"), "Versions/x.md")).toBe("[[Act 2/Scene]]");
 	});
 });
+
+describe("ambiguous names", () => {
+	const notes = {
+		"Characters/Mira.md": {},
+		"Places/Mira.md": {},
+		"Tobin.md": {},
+		"Lone.md": {},
+		"Sub/Lone.md": {},
+	};
+
+	it("calls a bare name ambiguous only when several files answer to it", async () => {
+		const { isAmbiguousLink } = await import("../src/links");
+		const { app } = makeApp(notes);
+		expect(isAmbiguousLink(app, "Mira")).toBe(true);
+		expect(isAmbiguousLink(app, "mira")).toBe(true);
+		expect(isAmbiguousLink(app, "Tobin")).toBe(false);
+		// A path names one file.
+		expect(isAmbiguousLink(app, "Places/Mira")).toBe(false);
+		// A bare name shared with a root note may still mean either (v0.9.6);
+		// the root note named with its extension is exact.
+		expect(isAmbiguousLink(app, "Lone")).toBe(true);
+		expect(isAmbiguousLink(app, "Lone.md")).toBe(false);
+	});
+
+	it("lists every file a bare name could mean", async () => {
+		const { linkCandidates } = await import("../src/links");
+		const { app } = makeApp(notes);
+		expect(linkCandidates(app, "Mira").map((file) => file.path).sort()).toEqual(["Characters/Mira.md", "Places/Mira.md"]);
+		expect(linkCandidates(app, "Tobin").map((file) => file.path)).toEqual(["Tobin.md"]);
+	});
+});
+
+describe("recordLink (v0.9.6)", () => {
+	it("names a note so no other note, root or not, can be read into it", async () => {
+		const { recordLink, isAmbiguousLink } = await import("../src/links");
+		const { app, file } = makeApp({ "Mira.md": {}, "Places/Mira.md": {}, "Tobin.md": {} });
+		expect(recordLink(app, file("Mira.md"))).toBe("Mira.md");
+		expect(recordLink(app, file("Places/Mira.md"))).toBe("Places/Mira");
+		expect(recordLink(app, file("Tobin.md"))).toBe("Tobin");
+		for (const path of ["Mira.md", "Places/Mira.md", "Tobin.md"]) {
+			expect(isAmbiguousLink(app, recordLink(app, file(path)))).toBe(false);
+		}
+	});
+});

@@ -5,6 +5,7 @@ import { PromoteModal } from "../modals/promote";
 import { asString } from "../frontmatter";
 import { loreFiles } from "../scope";
 import { addExampleBadge } from "../guide/badge";
+import { applyContentLang, applyLang } from "../i18n";
 
 export const VIEW_TYPE_DRAFTS = "plc-drafts";
 
@@ -41,6 +42,7 @@ export class DraftsView extends ItemView {
 	}
 
 	async onOpen() {
+		applyLang(this.containerEl);
 		this.contentEl.addClass("plc-list-view");
 		this.render();
 	}
@@ -78,9 +80,10 @@ export class DraftsView extends ItemView {
 			return;
 		}
 
+		const unassigned = t("drafts.unassigned");
 		const groups = new Map<string, Draft[]>();
 		for (const draft of drafts) {
-			const key = draft.ideaFor || t("drafts.unassigned");
+			const key = draft.ideaFor || unassigned;
 			const bucket = groups.get(key);
 			if (bucket) {
 				bucket.push(draft);
@@ -90,7 +93,9 @@ export class DraftsView extends ItemView {
 		}
 
 		for (const [group, members] of [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-			this.contentEl.createEl("h4", { cls: "plc-list-heading", text: group });
+			const headingEl = this.contentEl.createEl("h4", { cls: "plc-list-heading", text: group });
+			// A group named after a note is the author's words, uppercased by their rules.
+			if (group !== unassigned) applyContentLang(headingEl);
 			const listEl = this.contentEl.createDiv({ cls: "plc-list" });
 			for (const draft of members) this.renderDraft(listEl, draft);
 		}

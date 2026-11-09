@@ -6,6 +6,7 @@ import { asNumberOrNull, asString } from "../frontmatter";
 import { TimePrecision, daysPerYear, isTimePrecision, parseUniverseDate } from "../time";
 import { loreFiles } from "../scope";
 import { addExampleBadge } from "../guide/badge";
+import { applyLang } from "../i18n";
 
 const ANY = "__any";
 
@@ -47,6 +48,7 @@ export class SearchModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("search.title"));
 		this.contentEl.addClass("plc-search");
@@ -242,7 +244,7 @@ export class SearchModal extends Modal {
 
 			const when =
 				row.timeLabel ||
-				(row.time === null ? "" : this.plugin.universe.formatTime(row.time, row.precision, this.plugin.language));
+				(row.time === null ? "" : this.plugin.universe.formatTime(row.time, row.precision, this.plugin.i18n.t("time.dayLabel")));
 			const context = [row.timeline, row.flow, when].filter((part) => part.length > 0);
 			if (context.length > 0) {
 				rowEl.createDiv({ cls: "plc-list-meta", text: context.join(" · ") });

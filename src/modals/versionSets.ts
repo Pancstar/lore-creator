@@ -1,9 +1,13 @@
-import { App, Modal, Notice, Setting, setIcon } from "obsidian";
+import { App, Modal, Notice, Setting, TFile, setIcon } from "obsidian";
 import type LorePlugin from "../main";
 import type { VersionSet, VersionSetStore } from "../versions/sets";
 import { ConfirmModal } from "./confirm";
+import { askOwner } from "./resolveOwner";
 import { LiveRefresh } from "./liveRefresh";
 import { enterSubmits } from "./enterSubmits";
+import { applyLang } from "../i18n";
+import { linkCandidates } from "../links";
+import { isTemplate } from "../scope";
 
 type ApplyResult = Awaited<ReturnType<VersionSetStore["apply"]>>;
 
@@ -13,6 +17,9 @@ type ApplyResult = Awaited<ReturnType<VersionSetStore["apply"]>>;
  */
 export class VersionSetsModal extends Modal {
 	private live = new LiveRefresh(this.app, () => this.renderBody());
+	/** Old records are being settled with the author; another apply waits. */
+	private resolving = false;
+	private closed = false;
 
 	constructor(
 		app: App,
@@ -22,6 +29,7 @@ export class VersionSetsModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.plugin.i18n.t("sets.title"));
 		this.contentEl.addClass("plc-versions");
@@ -87,7 +95,9 @@ export class VersionSetsModal extends Modal {
 
 		const actionsEl = rowEl.createDiv({ cls: "plc-version-actions" });
 
-		if (plan.changes.length > 0) {
+		// Old records may hide changes this plan cannot see yet, so the button
+		// stays reachable while they wait to be settled.
+		if (plan.changes.length > 0 || this.plugin.versionSets.needsSettling(set)) {
 			const applyButton = actionsEl.createEl("button", {
 				cls: "clickable-icon",
 				attr: { "aria-label": t("sets.apply"), title: t("sets.apply") },
@@ -128,9 +138,81 @@ export class VersionSetsModal extends Modal {
 	}
 
 	private confirmApply(set: VersionSet) {
+		if (this.live.busy || this.resolving) return;
+		this.resolving = true;
+		void this.settleOwners(set).finally(() => (this.resolving = false));
+	}
+
+	/**
+	 * Old sets and archives may name a note by a name several notes share.
+	 * Each one is settled with the author first, so the plan below switches
+	 * the notes they mean. Backing out of any question applies nothing.
+	 */
+	private async settleOwners(set: VersionSet) {
+		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
+		const { versions, versionSets } = this.plugin;
+		const ask = (body: string, candidates: TFile[]) =>
+			askOwner(this.app, {
+				title: t("owner.title"),
+				body,
+				candidates,
+				chooseLabel: t("owner.choose"),
+				cancelLabel: t("common.cancel"),
+			});
+
+		try {
+			// The set is carried forward in memory as it is fixed, so what is
+			// applied is what was chosen, whenever Obsidian's index catches up.
+			let current = set;
+			for (const note of versionSets.ambiguousNotes(current)) {
+				const candidates = linkCandidates(this.app, note).filter(
+					(file) => !isTemplate(file) && !versions.isArchived(file),
+				);
+				// Nothing to choose from: the plan lists the entry as missing.
+				if (candidates.length === 0) continue;
+				const owner = await ask(t("owner.set.body", set.name, note), candidates);
+				if (!owner || this.closed) return;
+				const exact = await versionSets.setEntryNote(current.id, note, owner);
+				current = {
+					...current,
+					entries: current.entries.map((entry) => (entry.note === note ? { ...entry, note: exact } : entry)),
+				};
+			}
+
+			// Every old archive that could belong to a note this set switches,
+			// including ones Obsidian filed under another note of the same name.
+			const asked = new Set<string>();
+			for (const entry of current.entries) {
+				const active = versionSets.noteFor(entry);
+				if (!active) continue;
+				for (const archive of versions.ambiguousArchivesNamed(active.basename)) {
+					if (asked.has(archive.path)) continue;
+					asked.add(archive.path);
+					const candidates = versions.ownerCandidates(archive);
+					if (candidates.length === 0) continue;
+					const owner = await ask(t("owner.archive.body", archive.path, active.basename), candidates);
+					if (!owner || this.closed) return;
+					await versions.setOwner(archive, owner);
+				}
+			}
+			if (!this.closed) this.showApplyConfirm(current);
+		} catch (error) {
+			console.error("Lore Creator: could not fix an old record", error);
+			new Notice(t("owner.fixFailed"));
+		}
+	}
+
+	private showApplyConfirm(set: VersionSet) {
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		if (this.live.busy) return;
 		const plan = this.plugin.versionSets.plan(set);
+		if (plan.changes.length === 0) {
+			// Settling the records showed there is nothing to switch.
+			const missing = plan.missing.length > 0 ? ` ${t("sets.missing", plan.missing.join(", "))}` : "";
+			new Notice(t("sets.alreadyActive") + missing);
+			this.renderBody();
+			return;
+		}
 
 		// Applying a set moves several files at once, so the dialog spells out
 		// every note it will touch rather than just counting them.
@@ -209,6 +291,7 @@ export class VersionSetsModal extends Modal {
 	}
 
 	onClose() {
+		this.closed = true;
 		this.live.stop();
 		this.contentEl.empty();
 	}

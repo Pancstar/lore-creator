@@ -3,6 +3,7 @@ import type LorePlugin from "../main";
 import { ConfirmModal } from "./confirm";
 import { asString } from "../frontmatter";
 import { enterSubmits } from "./enterSubmits";
+import { applyLang } from "../i18n";
 
 interface FlowEntry {
 	id: string;
@@ -56,6 +57,7 @@ export class LaneEditModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("lane.title"));

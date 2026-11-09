@@ -29,6 +29,7 @@ export const guideEn: Record<string, string> = {
 	"guide.action.newNote": "Write a new note",
 	"guide.action.openTimeline": "Open the timeline",
 	"guide.action.openDashboard": "Open the dashboard",
+	"guide.action.openRelations": "Open relations",
 
 	// 1. Intro
 	"guide.intro.title": "What is Lore Creator?",
@@ -109,6 +110,15 @@ export const guideEn: Record<string, string> = {
 		"A page can have more than one \"next\". That is how a story splits into two roads.",
 	"guide.links.tip": "Lost in your story? Follow the arrows. They always lead back to the main road.",
 	"guide.links.curious": "The arrows are the next and prev fields, each a list of links like [[Storm]].",
+
+	"guide.relations.title": "Who is connected to whom",
+	"guide.relations.1":
+		"The timeline shows what happens when. Relations show who belongs together: who lives where, who is in which group, who takes part in what.",
+	"guide.relations.2":
+		"Open relations and the note you are reading sits in the middle, with everything it is linked to around it. Click another note to move to it. Press 2 to look one step further out.",
+	"guide.relations.tip": "Want to keep one note in the middle while you read others? Press the lock.",
+	"guide.relations.curious":
+		"The lines come from the link fields of each type (members, location, enemies…) and from laws and breaks-law. You can add more link fields to a type in the types note.",
 
 	// 8. Dashboard
 	"guide.dashboard.title": "Dashboard: what is unfinished",

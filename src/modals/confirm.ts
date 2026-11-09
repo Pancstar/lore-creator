@@ -1,4 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
+import { applyLang } from "../i18n";
 
 export interface ConfirmOptions {
 	title: string;
@@ -27,6 +28,7 @@ export class ConfirmModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		this.titleEl.setText(this.options.title);
 		this.contentEl.addClass("plc-confirm");
 		this.contentEl.createEl("p", { text: this.options.body });

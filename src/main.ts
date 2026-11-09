@@ -1,7 +1,7 @@
 import { MarkdownView, Notice, Plugin, TAbstractFile, TFile, WorkspaceLeaf, debounce, getLanguage, normalizePath } from "obsidian";
 import { SetupModal } from "./setup/wizard";
 import { LoreSettingTab } from "./settings";
-import { I18n } from "./i18n";
+import { I18n, applyLang } from "./i18n";
 import { DEFAULT_SETTINGS, LoreSettings, sanitizeSettings } from "./settingsData";
 import { Universe } from "./universe";
 import { TypeRegistry } from "./types";
@@ -19,6 +19,7 @@ import {
 	DraftsView,
 	GuideView,
 	LawsView,
+	RelationsView,
 	TimelineView,
 	VIEW_DEFINITIONS,
 	VIEW_TYPE_DASHBOARD,
@@ -29,6 +30,7 @@ import type { ChapterId } from "./guide/chapters";
 import { SearchModal } from "./modals/search";
 import { ExportModal } from "./modals/export";
 import { TimelineModel } from "./timeline/model";
+import { invalidateRelations } from "./relations";
 import { openTimeSystemEditor } from "./modals/timeSystem";
 import { setTemplatesFolder } from "./scope";
 
@@ -335,6 +337,7 @@ export default class LorePlugin extends Plugin {
 	private invalidateIndexes() {
 		TimelineModel.invalidate();
 		this.versions.invalidate();
+		invalidateRelations();
 	}
 
 	private refreshAll() {
@@ -369,12 +372,15 @@ export default class LorePlugin extends Plugin {
 		for (const definition of VIEW_DEFINITIONS) {
 			for (const leaf of this.app.workspace.getLeavesOfType(definition.type)) {
 				const view = leaf.view;
+				// The language may just have changed: keep CSS case rules in step.
+				applyLang(view.containerEl);
 				if (view instanceof GuideView) {
 					view.refresh();
 				} else if (
 					view instanceof LawsView ||
 					view instanceof DraftsView ||
-					view instanceof DashboardView
+					view instanceof DashboardView ||
+					view instanceof RelationsView
 				) {
 					view.render();
 				}
@@ -392,37 +398,39 @@ export default class LorePlugin extends Plugin {
 
 	/** Opens the guide tab, on a given chapter when asked. */
 	async openGuide(chapter?: ChapterId) {
-		await this.activateView(VIEW_TYPE_GUIDE);
-		const view = this.app.workspace.getLeavesOfType(VIEW_TYPE_GUIDE)[0]?.view;
+		const view = (await this.activateView(VIEW_TYPE_GUIDE))?.view;
 		if (chapter && view instanceof GuideView) view.openChapter(chapter);
 	}
 
-	/** Reveals an existing leaf, opening it where that kind of view belongs. */
 	/** Opens the timeline and brings a note into view once the canvas has a size. */
 	async showInTimeline(file: TFile) {
-		await this.activateView(VIEW_TYPE_TIMELINE);
-		const view = this.app.workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)[0]?.view;
+		const view = (await this.activateView(VIEW_TYPE_TIMELINE))?.view;
 		if (!(view instanceof TimelineView)) return;
 		window.requestAnimationFrame(() => {
 			if (!view.showNote(file)) new Notice(this.i18n.t("timeline.notOnTimeline"));
 		});
 	}
 
-	async activateView(viewType: string) {
+	/**
+	 * Reveals an existing leaf, opening it where that kind of view belongs.
+	 * Returns the leaf shown, or null when none could be opened.
+	 */
+	async activateView(viewType: string): Promise<WorkspaceLeaf | null> {
 		const { workspace } = this.app;
 
 		const existing = workspace.getLeavesOfType(viewType);
 		if (existing.length > 0) {
 			await workspace.revealLeaf(existing[0]);
-			return;
+			return existing[0];
 		}
 
 		const definition = VIEW_DEFINITIONS.find((entry) => entry.type === viewType);
 		const leaf: WorkspaceLeaf | null =
 			definition?.placement === "main" ? workspace.getLeaf("tab") : workspace.getRightLeaf(false);
-		if (!leaf) return;
+		if (!leaf) return null;
 
 		await leaf.setViewState({ type: viewType, active: true });
 		await workspace.revealLeaf(leaf);
+		return leaf;
 	}
 }

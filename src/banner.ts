@@ -7,6 +7,7 @@ import { openTimeSystemEditor } from "./modals/timeSystem";
 import { isTimePrecision } from "./time";
 import { asNumberOrNull, asString } from "./frontmatter";
 import { tracksStatus } from "./status";
+import { applyLang } from "./i18n";
 
 const BANNER_CLASS = "plc-banner";
 /** Marks a view showing a lore note, so CSS hides Properties only there. */
@@ -57,6 +58,7 @@ export class Banner {
 		if (!type || type.id === "system") return;
 
 		const bannerEl = createDiv({ cls: BANNER_CLASS });
+		applyLang(bannerEl);
 		this.buildHeadRow(bannerEl, file, frontmatter, type.icon);
 		this.buildMetaRow(bannerEl, file, frontmatter, typeId);
 		this.buildTimeRow(bannerEl, file, frontmatter);
@@ -160,7 +162,7 @@ export class Banner {
 			const timeSystem = this.plugin.universe.readTime();
 			const precision = isTimePrecision(frontmatter["time-precision"]) ? frontmatter["time-precision"] : "year";
 			const format = (value: number) =>
-				this.plugin.universe.formatTime(value, precision, this.plugin.language, timeSystem);
+				this.plugin.universe.formatTime(value, precision, this.plugin.i18n.t("time.dayLabel"), timeSystem);
 			const head = label || format(time);
 			const tail = timeEnd === null ? "" : ` – ${format(timeEnd)}`;
 			const prefix = uncertain ? `~ ` : "";
@@ -217,7 +219,6 @@ export class Banner {
 			this.plugin.app,
 			this.plugin.i18n,
 			this.plugin.universe,
-			this.plugin.language,
 			current,
 			(value) => {
 				void this.plugin.app.fileManager.processFrontMatter(file, (target: Record<string, unknown>) => {

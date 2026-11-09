@@ -13,4 +13,5 @@ in both folders so the links do not break.
 | `guide.png` | The built-in guide's timeline chapter |
 | `dashboard.png` | The dashboard: counts, unfinished work, the consistency report with kind chips |
 | `laws.png` | The laws view, including who breaks a law |
+| `relations.png` | The relations view centred on the lighthouse: what happens there and who lives there |
 | `time-editor.png` | The time system editor with a live example |

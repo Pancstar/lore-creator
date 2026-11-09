@@ -9,6 +9,7 @@ import {
 	timeToParts,
 	validateTime,
 } from "../src/time";
+import { en, tr } from "../src/i18n";
 import { DEFAULT_TIME, Time } from "../src/universe";
 
 const xen: Time = { ...DEFAULT_TIME, timeName: "Xen", timeUnit: "cycle", timeDays: 360 };
@@ -35,16 +36,20 @@ describe("partsToTime / timeToParts", () => {
 });
 
 describe("formatLabel / formatTime", () => {
-	it("writes the label in either language", () => {
+	const dayEn = en["time.dayLabel"];
+	const dayTr = tr["time.dayLabel"];
+
+	it("writes the label in either language, the day wording from the string tables", () => {
 		const parts = { year: 12, day: 5, hour: 9, minute: 3 };
-		expect(formatLabel(parts, xen, "year", "en")).toBe("Xen cycle 12");
-		expect(formatLabel(parts, xen, "date", "en")).toBe("Xen cycle 12, day 5");
-		expect(formatLabel(parts, xen, "date", "tr")).toBe("Xen cycle 12, 5. gün");
-		expect(formatLabel(parts, xen, "datetime", "en")).toBe("Xen cycle 12, day 5 09:03");
+		expect(formatLabel(parts, xen, "year", dayEn)).toBe("Xen cycle 12");
+		expect(formatLabel(parts, xen, "date", dayEn)).toBe("Xen cycle 12, day 5");
+		expect(formatLabel(parts, xen, "date", dayTr)).toBe("Xen cycle 12, 5. gün");
+		expect(formatLabel(parts, xen, "datetime", dayEn)).toBe("Xen cycle 12, day 5 09:03");
+		expect(formatLabel(parts, xen, "datetime", dayTr)).toBe("Xen cycle 12, 5. gün 09:03");
 	});
 
 	it("floors a fractional year in the label", () => {
-		expect(formatTime(7.9, xen, "year", "en")).toBe("Xen cycle 7");
+		expect(formatTime(7.9, xen, "year", dayEn)).toBe("Xen cycle 7");
 	});
 });
 

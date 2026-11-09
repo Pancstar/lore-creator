@@ -14,6 +14,7 @@ import {
 	buildUniverseNote,
 	resolveTypes,
 } from "./defaults";
+import { applyLang } from "../i18n";
 
 type Lang = "tr" | "en";
 
@@ -44,6 +45,7 @@ export class SetupModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("setup.title"));
 		this.contentEl.createEl("p", { cls: "setting-item-description", text: t("setup.desc") });

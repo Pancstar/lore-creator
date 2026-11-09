@@ -5,8 +5,9 @@ import { DraftsView, VIEW_TYPE_DRAFTS } from "./drafts";
 import { DashboardView, VIEW_TYPE_DASHBOARD } from "./dashboard";
 import type LorePlugin from "../main";
 import { GuideView, VIEW_TYPE_GUIDE } from "../guide/view";
+import { RelationsView, VIEW_TYPE_RELATIONS } from "./relations";
 
-export { VIEW_TYPE_TIMELINE, VIEW_TYPE_LAWS, VIEW_TYPE_DRAFTS, VIEW_TYPE_DASHBOARD, VIEW_TYPE_GUIDE };
+export { VIEW_TYPE_TIMELINE, VIEW_TYPE_LAWS, VIEW_TYPE_DRAFTS, VIEW_TYPE_DASHBOARD, VIEW_TYPE_GUIDE, VIEW_TYPE_RELATIONS };
 
 export interface ViewDefinition {
 	type: string;
@@ -32,6 +33,15 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 		placement: "main",
 		ribbon: true,
 		create: (leaf, plugin) => new TimelineView(leaf, plugin),
+	},
+	{
+		type: VIEW_TYPE_RELATIONS,
+		titleKey: "view.relations",
+		commandKey: "command.openRelations",
+		icon: "waypoints",
+		// A web of notes needs room, like the timeline.
+		placement: "main",
+		create: (leaf, plugin) => new RelationsView(leaf, plugin),
 	},
 	{
 		type: VIEW_TYPE_LAWS,
@@ -69,4 +79,4 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
 	},
 ];
 
-export { TimelineView, LawsView, DraftsView, DashboardView, GuideView };
+export { TimelineView, LawsView, DraftsView, DashboardView, GuideView, RelationsView };

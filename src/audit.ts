@@ -1,5 +1,5 @@
 import { App, TFile, normalizePath } from "obsidian";
-import { linkTargets } from "./links";
+import { isAmbiguousLink, linkTargets, sharedBasenames } from "./links";
 import { TimelineModel } from "./timeline/model";
 import { asNumberOrNull, asString } from "./frontmatter";
 import { loreFiles } from "./scope";
@@ -160,18 +160,8 @@ export class Audit {
 	 */
 	private checkAmbiguousRecords(issues: Issue[]) {
 		const files = loreFiles(this.app);
-		// Every markdown file counts, templates too: a bare name can resolve to
-		// any of them, and Obsidian matches names regardless of case.
-		const shared = new Map<string, number>();
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			const key = file.basename.toLowerCase();
-			shared.set(key, (shared.get(key) ?? 0) + 1);
-		}
-		const ambiguous = (link: string) =>
-			!link.includes("/") &&
-			// A name that is also an exact root path resolves to that file.
-			!this.app.vault.getFileByPath(`${link}.md`) &&
-			(shared.get(link.toLowerCase()) ?? 0) > 1;
+		const shared = sharedBasenames(this.app);
+		const ambiguous = (link: string) => isAmbiguousLink(this.app, link, shared);
 
 		for (const file of files) {
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;

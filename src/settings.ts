@@ -4,6 +4,8 @@ import { DEFAULT_SETTINGS, LoreSettings } from "./settingsData";
 import type { Language } from "./i18n";
 import { SetupModal } from "./setup/wizard";
 import { openTimeSystemEditor } from "./modals/timeSystem";
+import { offerRelabel } from "./modals/relabel";
+import { TimeNameEdits } from "./timeNameEdits";
 
 // Kept here as before for callers; the data lives in settingsData so tests can reach it.
 export { DEFAULT_SETTINGS };
@@ -30,8 +32,11 @@ export class LoreSettingTab extends PluginSettingTab {
 	 * note and redraws every view. Typing is buffered here and written once the
 	 * author pauses or leaves the tab.
 	 */
-	private pendingTimeName: string | null = null;
-	private flushTimeName = debounce(() => void this.writeTimeName(), 500, true);
+	private timeName = new TimeNameEdits(
+		() => this.plugin.universe.readTime().timeName,
+		(name) => this.plugin.universe.writeTime({ ...this.plugin.universe.readTime(), timeName: name }),
+	);
+	private flushTimeName = debounce(() => void this.saveTimeName(), 500, true);
 
 	constructor(
 		app: App,
@@ -41,17 +46,35 @@ export class LoreSettingTab extends PluginSettingTab {
 	}
 
 	hide() {
-		this.flushTimeName.run();
+		this.flushTimeName.cancel();
+		// Typing is done: save the name, then offer once to bring the plugin's
+		// own time labels along. Nothing is asked while the author types.
+		void this.timeName
+			.finish()
+			.then((change) => {
+				if (!change) return;
+				const current = this.plugin.universe.readTime();
+				return offerRelabel(
+					this.plugin,
+					{ ...current, timeName: change.before },
+					{ ...current, timeName: change.after },
+				);
+			})
+			.catch((error) => this.reportTimeNameFailure(error));
 		super.hide();
 	}
 
-	private async writeTimeName() {
-		const name = this.pendingTimeName;
-		if (name === null) return;
-		this.pendingTimeName = null;
-		const current = this.plugin.universe.readTime();
-		if (current.timeName === name) return;
-		await this.plugin.universe.writeTime({ ...current, timeName: name });
+	private async saveTimeName() {
+		try {
+			await this.timeName.flush();
+		} catch (error) {
+			this.reportTimeNameFailure(error);
+		}
+	}
+
+	private reportTimeNameFailure(error: unknown) {
+		console.error("Lore Creator: could not save the time name", error);
+		new Notice(this.plugin.i18n.t("time.editor.saveFailed"), 8000);
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -151,12 +174,15 @@ export class LoreSettingTab extends PluginSettingTab {
 						desc: t("settings.time.edit.desc"),
 						visible: () => !!this.plugin.universe.file,
 						action: () => {
-							// A name still waiting in the debounce is not in the
-							// metadata cache yet; hand it to the editor so its Save
-							// does not write the old name back.
-							const pending = this.pendingTimeName;
-							this.flushTimeName.run();
-							openTimeSystemEditor(this.plugin, pending === null ? {} : { timeName: pending });
+							// A name typed or just saved may not be in the metadata
+							// cache yet; hand it to the editor so its Save does not
+							// write the old name back, along with the name the
+							// labels were written under.
+							const name = this.timeName.current;
+							const labelName = this.timeName.labelName;
+							this.flushTimeName.cancel();
+							void this.timeName.handOff().catch((error) => this.reportTimeNameFailure(error));
+							openTimeSystemEditor(this.plugin, { timeName: name }, labelName);
 						},
 					},
 					{
@@ -212,7 +238,7 @@ export class LoreSettingTab extends PluginSettingTab {
 
 	getControlValue(key: string): unknown {
 		if (key === "time:name") {
-			return this.pendingTimeName ?? this.plugin.universe.readTime().timeName;
+			return this.timeName.current;
 		}
 
 		if (key.startsWith("path:")) {
@@ -237,7 +263,7 @@ export class LoreSettingTab extends PluginSettingTab {
 	async setControlValue(key: string, value: unknown): Promise<void> {
 		if (key === "time:name") {
 			if (typeof value !== "string") return;
-			this.pendingTimeName = value;
+			this.timeName.type(value);
 			this.flushTimeName();
 			return;
 		}

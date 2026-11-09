@@ -1,6 +1,7 @@
 import { App, Modal, getIconIds, setIcon } from "obsidian";
-import { EMOJI_CATEGORIES, searchEmoji } from "../emoji";
+import { EMOJI_CATEGORIES, emojiTooltip, searchEmoji } from "../emoji";
 import type { I18n } from "../i18n";
+import { applyLang } from "../i18n";
 
 export interface IconChoice {
 	icon: string;
@@ -30,6 +31,7 @@ export class IconPickerModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		const { contentEl, titleEl } = this;
 		titleEl.setText(this.i18n.t("icon.title"));
 		contentEl.addClass("plc-icon-picker");
@@ -101,12 +103,12 @@ export class IconPickerModal extends Modal {
 			}
 			const gridEl = this.resultsEl.createDiv({ cls: "plc-icon-grid" });
 			for (const entry of matches) {
-				this.addEmojiButton(gridEl, entry.char, entry.en);
+				this.addEmojiButton(gridEl, entry.char, emojiTooltip(entry, this.i18n.current));
 			}
 			return;
 		}
 
-		const language = this.i18n.t("icon.lang") === "tr" ? "tr" : "en";
+		const language = this.i18n.current;
 		for (const category of EMOJI_CATEGORIES) {
 			this.resultsEl.createEl("h4", {
 				text: language === "tr" ? category.tr : category.en,
@@ -114,7 +116,7 @@ export class IconPickerModal extends Modal {
 			});
 			const gridEl = this.resultsEl.createDiv({ cls: "plc-icon-grid" });
 			for (const entry of category.entries) {
-				this.addEmojiButton(gridEl, entry.char, entry.en);
+				this.addEmojiButton(gridEl, entry.char, emojiTooltip(entry, this.i18n.current));
 			}
 		}
 	}

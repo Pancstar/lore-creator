@@ -1,10 +1,13 @@
 import { App, Modal, Notice, Setting } from "obsidian";
 import type LorePlugin from "../main";
 import type { Time } from "../universe";
-import { TimeIssue, formatTime, validateTime } from "../time";
+import { TimeIssue, formatTime, rescaleTime, validateTime } from "../time";
+import type { AutoLabel } from "../timeLabels";
+import { askRelabel, labelsToChange, runRelabel } from "./relabel";
 import { findDatedNotes, rescaleNotes, undoRescale } from "../timeRescale";
 import { SetupModal } from "../setup/wizard";
 import { enterSubmits } from "./enterSubmits";
+import { applyLang } from "../i18n";
 
 /** Empty text is "not a number", never a silent 0. */
 function parseNumber(text: string): number {
@@ -13,13 +16,13 @@ function parseNumber(text: string): number {
 }
 
 /** Opens the editor, or steers to setup when there is no universe to edit. */
-export function openTimeSystemEditor(plugin: LorePlugin, overrides: Partial<Time> = {}): void {
+export function openTimeSystemEditor(plugin: LorePlugin, overrides: Partial<Time> = {}, labelName?: string): void {
 	if (!plugin.universe.file) {
 		new Notice(plugin.i18n.t("time.editor.noUniverse"));
 		new SetupModal(plugin.app, plugin).open();
 		return;
 	}
-	new TimeSystemModal(plugin.app, plugin, overrides).open();
+	new TimeSystemModal(plugin.app, plugin, overrides, labelName).open();
 }
 
 /**
@@ -48,6 +51,8 @@ export class TimeSystemModal extends Modal {
 		private plugin: LorePlugin,
 		/** Values newer than the metadata cache, e.g. a just-typed name. */
 		overrides: Partial<Time> = {},
+		/** The time name the notes' labels were written under, when it differs (settings typing). */
+		private labelName?: string,
 	) {
 		super(app);
 		this.original = { ...this.plugin.universe.readTime(), ...overrides };
@@ -65,6 +70,7 @@ export class TimeSystemModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		this.titleEl.setText(this.t("time.editor.title"));
 		this.contentEl.addClass("plc-time-system");
@@ -201,7 +207,7 @@ export class TimeSystemModal extends Modal {
 		const sample = year + (day - 1) / this.draft.timeDays;
 
 		const parts = [
-			this.t("time.editor.preview", formatTime(sample, this.draft, "date", this.plugin.language)),
+			this.t("time.editor.preview", formatTime(sample, this.draft, "date", this.plugin.i18n.t("time.dayLabel"))),
 			this.t("time.editor.previewStored", String(Number(sample.toFixed(6)))),
 		];
 		const earth = this.plugin.universe.toEarthTime(sample, this.draft);
@@ -222,18 +228,49 @@ export class TimeSystemModal extends Modal {
 		const daysChanged = next.timeDays !== this.original.timeDays;
 		const dated = daysChanged ? findDatedNotes(this.app) : [];
 		if (dated.length === 0) {
-			await this.finish(next, this.t("time.editor.saved"));
+			await this.withLabels(next, false, dated);
 			return;
 		}
 
 		new RescaleChoiceModal(this.app, this.plugin, dated.length, (choice) => {
-			if (choice === "rescale") void this.rescaleAndWrite(next, dated);
-			else if (choice === "keep") void this.finish(next, this.t("time.editor.saved"));
+			if (choice === "rescale") void this.withLabels(next, true, dated);
+			else if (choice === "keep") void this.withLabels(next, false, dated);
 			else this.setBusy(false);
 		}).open();
 	}
 
-	private async rescaleAndWrite(next: Time, dated: ReturnType<typeof findDatedNotes>) {
+	/**
+	 * Time labels the plugin wrote would read differently under `next` (a new
+	 * name, unit or day count): asks whether they follow, then saves. Labels
+	 * the author wrote are never touched.
+	 */
+	private async withLabels(next: Time, rescale: boolean, dated: ReturnType<typeof findDatedNotes>) {
+		const original = this.original;
+		const written = this.labelName === undefined ? original : { ...original, timeName: this.labelName };
+		const labels = labelsToChange(this.plugin, written, next, (entry) =>
+			rescale ? rescaleTime(entry.value, original.timeDays, next.timeDays, entry.precision) : entry.value,
+		);
+		let relabel: AutoLabel[] = [];
+		if (labels.length > 0) {
+			const answer = await askRelabel(this.plugin, labels.length, true);
+			if (answer === null || answer === "cancel") {
+				this.setBusy(false);
+				return;
+			}
+			if (answer === "relabel") relabel = labels;
+		}
+		if (rescale) await this.rescaleAndWrite(next, dated, relabel);
+		else await this.finish(next, this.t("time.editor.saved"), relabel);
+	}
+
+	/** Rewrites the chosen labels once the new system is saved; returns a line for the notice. */
+	private async relabelAfterSave(next: Time, labels: AutoLabel[]): Promise<string> {
+		if (labels.length === 0) return "";
+		const updated = await runRelabel(this.plugin, labels, next);
+		return updated ? ` ${this.t("time.labels.done", String(updated))}` : "";
+	}
+
+	private async rescaleAndWrite(next: Time, dated: ReturnType<typeof findDatedNotes>, labels: AutoLabel[]) {
 		const result = await rescaleNotes(this.app, dated, this.original.timeDays, next.timeDays);
 		if (result.failed) {
 			console.error("Lore Creator: rescaling notes failed", result.error);
@@ -252,14 +289,16 @@ export class TimeSystemModal extends Modal {
 			this.setBusy(false);
 			return;
 		}
-		new Notice(this.t("time.editor.rescaled", String(result.updated)));
+		const labelLine = await this.relabelAfterSave(next, labels);
+		new Notice(this.t("time.editor.rescaled", String(result.updated)) + labelLine);
 		this.close();
 	}
 
-	/** Saves without touching notes, then closes, or reports and stays open. */
-	private async finish(next: Time, message: string) {
+	/** Saves without moving notes, then closes, or reports and stays open. */
+	private async finish(next: Time, message: string, labels: AutoLabel[]) {
 		if (await this.trySave(next)) {
-			new Notice(message);
+			const labelLine = await this.relabelAfterSave(next, labels);
+			new Notice(message + labelLine);
 			this.close();
 			return;
 		}
@@ -304,6 +343,7 @@ class RescaleChoiceModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("time.editor.rescale.title"));
 		this.contentEl.createEl("p", { text: t("time.editor.rescale.body", String(this.count)) });

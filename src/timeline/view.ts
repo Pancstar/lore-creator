@@ -27,6 +27,7 @@ import {
 	timeAt,
 } from "./layout";
 import { TimePrecision, isTimePrecision } from "../time";
+import { applyLang } from "../i18n";
 
 export const VIEW_TYPE_TIMELINE = "plc-timeline";
 
@@ -195,6 +196,7 @@ export class TimelineView extends ItemView {
 	}
 
 	async onOpen() {
+		applyLang(this.containerEl);
 		this.contentEl.addClass("plc-timeline-view");
 		this.toolbarEl = this.contentEl.createDiv({ cls: "plc-timeline-toolbar" });
 		this.toolbarMainEl = this.toolbarEl.createDiv({ cls: "plc-timeline-toolbar-main" });
@@ -1269,7 +1271,7 @@ export class TimelineView extends ItemView {
 	}
 
 	private formatNodeTime(value: number, precision: TimePrecision): string {
-		return this.plugin.universe.formatTime(value, precision, this.plugin.language);
+		return this.plugin.universe.formatTime(value, precision, this.plugin.i18n.t("time.dayLabel"));
 	}
 
 	private xForTime(layout: Layout, time: number): number {

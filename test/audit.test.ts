@@ -324,11 +324,20 @@ describe("audit: ambiguous records (review fixes)", () => {
 		return new Audit(app, new TypeRegistry(app, REGISTRY), "/System/Version sets.md/").run();
 	};
 
-	it("does not flag a link that names a root-level note exactly", () => {
+	it("flags a bare name even when a root-level note carries it (v0.9.6): it may mean either", () => {
 		const issues = runWith({
 			"Scene.md": { type: "event" },
 			"Act 2/Scene.md": { type: "event" },
 			"Versions/Scene — v1.md": { type: "event", "version-of": "[[Scene]]" },
+		});
+		expect(find(issues, "ambiguous-link")).toHaveLength(1);
+	});
+
+	it("does not flag a root-level note named with its extension", () => {
+		const issues = runWith({
+			"Scene.md": { type: "event" },
+			"Act 2/Scene.md": { type: "event" },
+			"Versions/Scene — v1.md": { type: "event", "version-of": "[[Scene.md]]" },
 		});
 		expect(find(issues, "ambiguous-link")).toEqual([]);
 	});

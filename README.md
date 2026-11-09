@@ -32,7 +32,7 @@
 
 <br/><br/>
 
-> **Status — 0.9.4, feature complete.** Every feature below works and is covered by
+> **Status — 0.11.0, feature complete.** Every feature below works and is covered by
 > unit tests where it can be. The frontmatter schema may still shift before 1.0.
 
 </div>
@@ -114,10 +114,11 @@ flowchart TD
 | 📅 | **Your own time system** | Any unit, any epoch, optional mapping to Earth years |
 | 🗂️ | **Types and entities** | Characters, species, places, factions, objects, events — defined in a note, not in code |
 | ⚖️ | **Laws** | Universe physics and the entities that break them, linked both ways |
+| 🕸️ | **Relations** | Who lives where, who belongs to which group, who takes part in what — drawn around the open note |
 | 💡 | **Drafts you can promote** | A shelf for homeless ideas, turned into real notes when they earn it |
 | 🧭 | **Navigation** | A banner on top of each note and a bar underneath showing every place it leads, with a map |
 | 📊 | **Dashboard & consistency** | Counts, everything unfinished, and an advisory report with 15 kinds of checks |
-| 🔍 | **Search & export** | Filter by field, then build one Markdown document from what you choose |
+| 🔍 | **Search & export** | Filter by field, then share what you choose as a Markdown note, an HTML book, an HTML wiki or a PDF |
 | ⌨️ | **Keyboard and touch** | Walk the timeline with arrow keys, pinch to zoom, Enter submits every dialog |
 | 📖 | **Built-in guide** | A friendly tour inside Obsidian, with an FAQ and an example story to explore |
 
@@ -253,6 +254,25 @@ The registry lives in a note's frontmatter, so **adding a type is editing a note
 not editing this plugin** — and any AI assistant reading your vault can see what
 your types mean.
 
+### 🕸️ Relations
+
+The timeline shows what happens when; the **relations** view shows who belongs
+together. The open note sits in the middle, and every note its link fields
+(members, location, inhabitants, enemies…) and laws connect it with sits around
+it, in both directions, each line named after its field. Click a note to move to
+it, press **2** to look one step further out, and lock the view to keep one note
+in the middle while you read others.
+
+<div align="center">
+
+<img src="docs/images/en/relations.png" alt="The relations view centred on The Lighthouse: events located there and the characters who live there, each line named Location or Inhabitants" width="900" />
+
+<sub>🕸️ The Lighthouse in the middle — what happens there and who lives there</sub>
+
+</div>
+
+Any `link` or `links` field you add to a type in the registry shows up here.
+
 ### ⚖️ Laws that know who breaks them
 
 Universe-wide physics and entity-specific rules, kept as two layers. Entities
@@ -318,7 +338,7 @@ An archived version shows a slim bar instead, with a button back to the active o
 | 📊 | **Dashboard** | Counts by type, everything unfinished (half-written sorted above untouched), and a consistency report |
 | 🩺 | **Consistency** | Fifteen kinds of checks (listed below), each with a chip to switch it off. **Advisory only:** it corrects nothing and blocks nothing, because most findings are work in progress rather than mistakes |
 | 🔍 | **Search** | Filters by type, status, timeline, flow and time range. Obsidian's own search already covers the words; this answers *"every unfinished character in the main universe"* |
-| 📤 | **Export** | One Markdown document from the sections you choose. This is why notes carry no privacy flag: what a reader sees is decided when you share, not stored on every note forever |
+| 📤 | **Export** | The notes you choose, in chapters by type or by timeline, as a Markdown note, a single-page **HTML book** (pictures included, readable offline, prints well), an **HTML wiki** (a page per note, with "linked from" lists) or a **PDF** through Obsidian's own PDF export. Links between exported notes keep working; links to anything left out become plain words. This is why notes carry no privacy flag: what a reader sees is decided when you share, not stored on every note forever |
 
 <table><tr><td width="50%" valign="top">
 
@@ -376,13 +396,23 @@ Open the guide from the book icon in the ribbon, the **Open guide** command, or
 
 ### 📥 Install
 
-Not yet in the community plugin browser. Until then:
+Lore Creator is in Obsidian's community plugins:
+[community.obsidian.md/plugins/lore-creator](https://community.obsidian.md/plugins/lore-creator).
+
+1. In Obsidian: **Settings → Community plugins**, turn off Restricted Mode if it
+   is on, then **Browse** and search for *Lore Creator*.
+2. **Install**, then **Enable**.
+
+<details>
+<summary>Installing by hand</summary>
 
 1. Download `main.js`, `manifest.json` and `styles.css` from the
    [latest release](https://github.com/PancstaR/lore-creator/releases/latest).
 2. Put them in `<vault>/.obsidian/plugins/lore-creator/`.
 3. In Obsidian: **Settings → Community plugins**, turn off Restricted Mode, then
    enable *Lore Creator*.
+
+</details>
 
 > [!TIP]
 > On first start the guide opens by itself. Its *Set up your universe* chapter
@@ -505,7 +535,7 @@ flowchart LR
 |---|---|---|
 | 🪄 | Set up this vault | Create folders, templates and the type registry |
 | 📄 | New lore note | Create a note from a type's template |
-| 🪟 | Open timeline / laws / drafts / dashboard | Open a view |
+| 🪟 | Open timeline / relations / laws / drafts / dashboard | Open a view |
 | 📖 | Open guide | Open the built-in guide |
 | 📅 | Edit time system | Change the unit, days per unit and the link to Earth time |
 | 📝 | Versions of this note | List, create, switch and archive versions |
@@ -514,7 +544,7 @@ flowchart LR
 | 🎯 | Show this note on the timeline | Open the timeline centred on the current note |
 | 💡 | Promote this draft | Turn a sketch into a real note |
 | 🔍 | Find in the universe | Search by field rather than by text |
-| 📤 | Export the universe | Build a single Markdown document |
+| 📤 | Export the universe | A Markdown note, HTML book, HTML wiki or PDF |
 
 **On the timeline:** <kbd>Tab</kbd> reaches the notes, arrow keys walk between
 them, <kbd>Enter</kbd> opens one, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>0</kbd>
@@ -600,6 +630,9 @@ Issues and pull requests are welcome. Two things worth knowing before you start:
   readable from the notes themselves, so a universe survives without it.
 - 🛡️ **Nothing destructive happens without a dialog** naming the exact files, and
   file moves are ordered so a failure leaves a duplicate rather than a hole.
+
+💖 Lore Creator is free. If it helps your writing, you can
+[support its development on GitHub Sponsors](https://github.com/sponsors/PancstaR).
 
 ---
 

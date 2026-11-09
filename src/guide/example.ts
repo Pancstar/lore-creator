@@ -14,6 +14,7 @@ import {
 	exampleFolder,
 	isExampleBasename,
 } from "./exampleContent";
+import { applyLang } from "../i18n";
 
 /** True for a note the example story wrote, wherever it has been moved since. */
 export function isExampleNote(frontmatter: Record<string, unknown> | undefined): boolean {
@@ -138,6 +139,7 @@ class CreateExampleModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		this.titleEl.setText(this.t("example.create.title"));
 		this.contentEl.addClass("plc-confirm");
 		this.contentEl.createEl("p", { text: this.t("example.create.body") });
@@ -197,8 +199,7 @@ class CreateExampleModal extends Modal {
 				await app.vault.create(path, entry.content);
 			}
 			new Notice(this.t("example.created"));
-			await this.plugin.activateView(VIEW_TYPE_TIMELINE);
-			const view = app.workspace.getLeavesOfType(VIEW_TYPE_TIMELINE)[0]?.view;
+			const view = (await this.plugin.activateView(VIEW_TYPE_TIMELINE))?.view;
 			if (view instanceof TimelineView) view.showTimeline(EXAMPLE_TIMELINE_ID);
 		} catch (error) {
 			console.error("Lore Creator: could not create the example story", error);

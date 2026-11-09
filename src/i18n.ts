@@ -33,6 +33,7 @@ export const en: Strings = {
 
 	"view.timeline": "Timeline",
 	"view.laws": "Laws",
+	"view.relations": "Relations",
 	"view.drafts": "Drafts",
 	"view.dashboard": "Dashboard",
 
@@ -65,6 +66,19 @@ export const en: Strings = {
 
 	"command.openTimeline": "Open timeline",
 	"command.openLaws": "Open laws",
+	"command.openRelations": "Open relations",
+	"relations.depth1": "One step out",
+	"relations.depth2": "Two steps out",
+	"relations.lock": "Stay on this note",
+	"relations.unlock": "Follow the open note",
+	"relations.open": "Open the note",
+	"relations.laws": "bound by",
+	"relations.breaks": "breaks",
+	"relations.more": "+{0} more not shown",
+	"relations.hint": "Click a note to put it in the middle. Ctrl-click (long press on a phone) opens it.",
+	"relations.hintMac": "Click a note to put it in the middle. Cmd-click (long press on a phone) opens it.",
+	"relations.empty.none": "Open a lore note to see what it is connected to.",
+	"relations.empty.alone": "{0} is not connected to anything yet. Link it to other notes through its fields (members, location, enemies…) or its laws.",
 	"command.openDrafts": "Open drafts",
 	"command.openDashboard": "Open dashboard",
 
@@ -86,7 +100,6 @@ export const en: Strings = {
 	"icon.clear": "Remove icon",
 	"icon.noResults": "Nothing matched.",
 	"icon.more": "{0} more — narrow the search.",
-	"icon.lang": "en",
 
 	"new.title": "New lore note",
 	"new.type": "Type",
@@ -107,6 +120,7 @@ export const en: Strings = {
 	"time.precision.date": "Year and day",
 	"time.precision.datetime": "Year, day and time",
 	"time.start": "Start",
+	"time.dayLabel": "day {0}",
 	"time.end": "End",
 	"time.hasEnd": "Spans a range",
 	"time.hasEnd.desc": "Turn on when this covers a period rather than a single moment.",
@@ -151,6 +165,12 @@ export const en: Strings = {
 	"time.editor.rescaled": "Time system saved. Notes updated: {0}.",
 	"time.editor.rescaleFailed": "Could not update {0}. Nothing was changed; see the console.",
 	"time.editor.saved": "Time system saved.",
+	"time.labels.title": "Update time labels too?",
+	"time.labels.body": "{0} notes carry a time label the plugin wrote, and it would read differently under the new time system. Labels you wrote yourself are never changed.",
+	"time.labels.do": "Update labels",
+	"time.labels.leave": "Leave labels",
+	"time.labels.done": "Time labels updated: {0}.",
+	"time.labels.failed": "Could not update the label of {0}. The labels were put back; see the console.",
 	"time.editor.saveFailed": "Could not save the time system. Your notes are as they were; see the console.",
 	"time.editor.unrestored": "These notes could not be put back and still use the new day count. Check their dates: {0}",
 	"time.editSystem": "Edit the time system…",
@@ -248,6 +268,14 @@ export const en: Strings = {
 	"version.error.generic": "The version operation failed. Nothing was lost; see the console.",
 	"version.error.archived": "New versions can only be made from the active note, not from an archive.",
 	"version.error.active": "Only archived versions can be deleted.",
+	"owner.title": "Which note is this?",
+	"owner.archive.body": "{0} was recorded as a version of \"{1}\", but several notes have that name. Pick the right one: the record will then name it exactly.",
+	"owner.set.body": "The set {0} names \"{1}\", but several notes have that name. Pick the right one: the set will then name it exactly.",
+	"owner.choose": "This one",
+	"owner.otherNote": "This version belongs to {0}. Its record is fixed; open that note's versions to switch.",
+	"owner.fixFailed": "Could not fix the record, so nothing was switched. See the console.",
+	"owner.hidden": "{0} old versions recorded as \"{1}\" could belong to this note or to another note of that name.",
+	"owner.fix": "Settle",
 	"command.versions": "Versions of this note",
 
 	"sets.title": "Version sets",
@@ -413,6 +441,26 @@ export const en: Strings = {
 	"export.failed": "The export failed — see the console for details.",
 	"command.export": "Export the universe",
 	"export.defaultName": "Universe",
+	"export.format": "Format",
+	"export.format.markdown": "Markdown note",
+	"export.format.book": "HTML book (one page)",
+	"export.format.wiki": "HTML wiki (a page for each note)",
+	"export.format.pdf": "PDF (through Obsidian's PDF export)",
+	"export.sections": "Chapters",
+	"export.sections.type": "By type",
+	"export.sections.timeline": "By timeline",
+	"export.noTimeline": "Outside any timeline",
+	"export.linkedFrom": "Linked from",
+	"export.written": "Written: {0}",
+	"export.openBrowser": "Open in browser",
+	"export.showFolder": "Show in folder",
+	"export.tooLarge.title": "A large file",
+	"export.tooLarge.body": "The book will be about {0} MB, mostly pictures. Write it anyway?",
+	"export.tooLarge.go": "Write it",
+	"export.pdf.next": "The book is ready as a note; Obsidian's PDF export opens next.",
+	"export.pdf.unavailable": "Obsidian's PDF export is not available here; the book was written as a Markdown note.",
+	"export.pdf.manual": "The book is open as a note. Run \"Export to PDF\" from its menu to make the PDF.",
+	"export.rendering": "Preparing the export: {0} of {1} notes",
 
 	"settings.registryFile": "Type registry",
 	"settings.registryFile.desc": "Note whose frontmatter defines the available note types.",
@@ -471,6 +519,7 @@ export const tr: Strings = {
 
 	"view.timeline": "Zaman Çizgisi",
 	"view.laws": "Yasalar",
+	"view.relations": "İlişkiler",
 	"view.drafts": "Taslaklar",
 	"view.dashboard": "Pano",
 
@@ -503,6 +552,19 @@ export const tr: Strings = {
 
 	"command.openTimeline": "Zaman çizgisini aç",
 	"command.openLaws": "Yasaları aç",
+	"command.openRelations": "İlişkileri aç",
+	"relations.depth1": "Bir adım öteye kadar",
+	"relations.depth2": "İki adım öteye kadar",
+	"relations.lock": "Bu notta kal",
+	"relations.unlock": "Açık notu izle",
+	"relations.open": "Notu aç",
+	"relations.laws": "uyduğu yasa",
+	"relations.breaks": "çiğner",
+	"relations.more": "+{0} not daha (gösterilmiyor)",
+	"relations.hint": "Ortaya almak için bir nota tıkla. Ctrl ile tıklamak (telefonda uzun basmak) notu açar.",
+	"relations.hintMac": "Ortaya almak için bir nota tıkla. Cmd ile tıklamak (telefonda uzun basmak) notu açar.",
+	"relations.empty.none": "Neye bağlı olduğunu görmek için bir lore notu aç.",
+	"relations.empty.alone": "{0} henüz hiçbir şeye bağlı değil. Alanları (üyeler, yer, düşmanlar…) ya da yasaları üzerinden başka notlara bağla.",
 	"command.openDrafts": "Taslakları aç",
 	"command.openDashboard": "Panoyu aç",
 
@@ -524,7 +586,6 @@ export const tr: Strings = {
 	"icon.clear": "Simgeyi kaldır",
 	"icon.noResults": "Eşleşen yok.",
 	"icon.more": "{0} tane daha var — aramayı daralt.",
-	"icon.lang": "tr",
 
 	"new.title": "Yeni lore notu",
 	"new.type": "Tür",
@@ -545,6 +606,7 @@ export const tr: Strings = {
 	"time.precision.date": "Yıl ve gün",
 	"time.precision.datetime": "Yıl, gün ve saat",
 	"time.start": "Başlangıç",
+	"time.dayLabel": "{0}. gün",
 	"time.end": "Bitiş",
 	"time.hasEnd": "Bir aralığa yayılıyor",
 	"time.hasEnd.desc": "Tek an değil de bir dönem kaplıyorsa aç.",
@@ -589,6 +651,12 @@ export const tr: Strings = {
 	"time.editor.rescaled": "Zaman sistemi kaydedildi. Güncellenen not: {0}.",
 	"time.editor.rescaleFailed": "{0} güncellenemedi. Hiçbir şey değişmedi; ayrıntı konsolda.",
 	"time.editor.saved": "Zaman sistemi kaydedildi.",
+	"time.labels.title": "Zaman etiketleri de yenilensin mi?",
+	"time.labels.body": "{0} notun zaman etiketini eklenti yazmış ve yeni zaman sisteminde farklı okunacak. Senin yazdığın etiketlere hiç dokunulmaz.",
+	"time.labels.do": "Etiketleri yenile",
+	"time.labels.leave": "Etiketlere dokunma",
+	"time.labels.done": "Yenilenen zaman etiketi: {0}.",
+	"time.labels.failed": "{0} notunun etiketi yenilenemedi. Etiketler eski haline döndü; ayrıntı konsolda.",
 	"time.editor.saveFailed": "Zaman sistemi kaydedilemedi. Notların eskisi gibi; ayrıntı konsolda.",
 	"time.editor.unrestored": "Şu notlar geri alınamadı ve hâlâ yeni gün sayısını kullanıyor. Tarihlerini kontrol et: {0}",
 	"time.editSystem": "Zaman sistemini düzenle…",
@@ -685,6 +753,14 @@ export const tr: Strings = {
 	"version.error.generic": "Sürüm işlemi başarısız oldu. Hiçbir şey kaybolmadı; ayrıntı konsolda.",
 	"version.error.archived": "Yeni sürüm arşivden değil, yalnızca etkin nottan oluşturulabilir.",
 	"version.error.active": "Yalnızca arşivdeki sürümler silinebilir.",
+	"owner.title": "Bu hangi not?",
+	"owner.archive.body": "{0}, \"{1}\" adlı notun sürümü olarak kaydedilmiş ama bu adı taşıyan birden çok not var. Doğrusunu seç: kayıt artık onu tam yoluyla gösterecek.",
+	"owner.set.body": "{0} seti \"{1}\" notunu anıyor ama bu adı taşıyan birden çok not var. Doğrusunu seç: set artık onu tam yoluyla gösterecek.",
+	"owner.choose": "Bu not",
+	"owner.otherNote": "Bu sürüm {0} notuna aitmiş. Kaydı düzeltildi; geçiş için o notun sürümlerini aç.",
+	"owner.fixFailed": "Kayıt düzeltilemedi, hiçbir şey değiştirilmedi. Ayrıntı konsolda.",
+	"owner.hidden": "\"{1}\" diye kaydedilmiş {0} eski sürüm bu nota da, aynı adlı başka bir nota da ait olabilir.",
+	"owner.fix": "Netleştir",
 	"command.versions": "Bu notun sürümleri",
 
 	"sets.title": "Sürüm setleri",
@@ -850,6 +926,26 @@ export const tr: Strings = {
 	"export.failed": "Dışa aktarma başarısız oldu — ayrıntı için konsola bak.",
 	"command.export": "Evreni dışa aktar",
 	"export.defaultName": "Evren",
+	"export.format": "Biçim",
+	"export.format.markdown": "Markdown notu",
+	"export.format.book": "HTML kitap (tek sayfa)",
+	"export.format.wiki": "HTML wiki (her not için bir sayfa)",
+	"export.format.pdf": "PDF (Obsidian'ın PDF dışa aktarımıyla)",
+	"export.sections": "Bölümler",
+	"export.sections.type": "Türe göre",
+	"export.sections.timeline": "Zaman çizgisine göre",
+	"export.noTimeline": "Hiçbir zaman çizgisinde değil",
+	"export.linkedFrom": "Buraya bağlananlar",
+	"export.written": "Yazıldı: {0}",
+	"export.openBrowser": "Tarayıcıda aç",
+	"export.showFolder": "Klasörde göster",
+	"export.tooLarge.title": "Büyük bir dosya",
+	"export.tooLarge.body": "Kitap yaklaşık {0} MB olacak, çoğu görsellerden. Yine de yazılsın mı?",
+	"export.tooLarge.go": "Yaz",
+	"export.pdf.next": "Kitap not olarak hazır; sırada Obsidian'ın PDF dışa aktarımı açılıyor.",
+	"export.pdf.unavailable": "Obsidian'ın PDF dışa aktarımı burada yok; kitap Markdown notu olarak yazıldı.",
+	"export.pdf.manual": "Kitap not olarak açık. PDF için notun menüsünden \"PDF olarak dışa aktar\"ı çalıştır.",
+	"export.rendering": "Dışa aktarma hazırlanıyor: {1} nottan {0}",
 
 	"settings.registryFile": "Tür kaydı",
 	"settings.registryFile.desc": "Frontmatter'ı kullanılabilir not türlerini tanımlayan not.",
@@ -884,6 +980,32 @@ export const tr: Strings = {
 
 const TABLES: Record<Exclude<Language, "auto">, Strings> = { en, tr };
 
+/** The `time.dayLabel` wording of every interface language, to recognise labels written in any of them. */
+export function dayLabelTemplates(): string[] {
+	return Object.values(TABLES).map((table) => table["time.dayLabel"]);
+}
+
+/** The language the plugin last switched to, shared so any element can carry it. */
+let activeLanguage: Exclude<Language, "auto"> = "en";
+
+/**
+ * Marks an element as written in the plugin's language. CSS case changes follow
+ * `lang`: without it, an English heading inside a Turkish Obsidian is
+ * uppercased with Turkish rules and reads "GETTİNG STARTED".
+ */
+export function applyLang(el: HTMLElement): void {
+	el.setAttribute("lang", activeLanguage);
+}
+
+/**
+ * The author's own words (a note name used as a heading, say) inside a plugin
+ * view: they follow Obsidian's language, as they did before the view carried
+ * the plugin's, so "istanbul" still uppercases to "İSTANBUL" in Turkish.
+ */
+export function applyContentLang(el: HTMLElement): void {
+	el.setAttribute("lang", el.ownerDocument.documentElement.lang);
+}
+
 export class I18n {
 	private table: Strings = en;
 	private resolved: Exclude<Language, "auto"> = "en";
@@ -891,6 +1013,7 @@ export class I18n {
 	setLanguage(language: Language, obsidianLocale: string) {
 		this.resolved = language === "auto" ? this.detect(obsidianLocale) : language;
 		this.table = TABLES[this.resolved] ?? en;
+		activeLanguage = this.resolved;
 	}
 
 	/** The language actually in effect, with "auto" already resolved. */

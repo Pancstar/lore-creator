@@ -32,7 +32,7 @@
 
 <br/><br/>
 
-> **Durum — 0.9.4, özellikler tamam.** Aşağıdaki her özellik çalışıyor ve
+> **Durum — 0.11.0, özellikler tamam.** Aşağıdaki her özellik çalışıyor ve
 > mümkün olan yerlerde birim testleriyle korunuyor. Frontmatter şeması 1.0'a kadar
 > değişebilir.
 
@@ -116,10 +116,11 @@ flowchart TD
 | 📅 | **Kendi zaman sistemin** | İstediğin birim, istediğin sıfır noktası, isteğe bağlı Dünya karşılığı |
 | 🗂️ | **Türler ve varlıklar** | Karakter, tür, mekân, fraksiyon, nesne, olay — kodda değil, bir notta tanımlı |
 | ⚖️ | **Yasalar** | Evren fiziği ve onu çiğneyen varlıklar, iki yönlü bağlı |
+| 🕸️ | **İlişkiler** | Kim nerede yaşıyor, kim hangi grupta, kim neye katılıyor — açık notun çevresinde çizilir |
 | 💡 | **Terfi edilebilen taslaklar** | Yeri olmayan fikirler için raf; hak ettiğinde gerçek nota dönüşür |
 | 🧭 | **Gezinme** | Her notun üstünde bir şerit, altında nereye bağlandığını gösteren çubuk ve harita |
 | 📊 | **Pano ve tutarlılık** | Sayılar, yarım kalan her şey ve 15 çeşit kontrollü, uyarı amaçlı rapor |
-| 🔍 | **Arama ve dışa aktarma** | Alanlara göre süz, seçtiklerinden tek Markdown dokümanı üret |
+| 🔍 | **Arama ve dışa aktarma** | Alanlara göre süz, seçtiklerini Markdown notu, HTML kitap, HTML wiki ya da PDF olarak paylaş |
 | ⌨️ | **Klavye ve dokunmatik** | Zaman çizgisinde oklarla gez, iki parmakla yakınlaştır, her pencerede Enter gönderir |
 | 📖 | **Eklenti içi rehber** | Obsidian içinde sade bir gezinti; SSS ve kurcalanacak örnek bir hikâyeyle |
 
@@ -256,6 +257,25 @@ Tür kaydı bir notun frontmatter'ında durur; yani **yeni tür eklemek bir notu
 düzenlemektir, bu eklentiyi düzenlemek değil** — ve vault'unu okuyan herhangi
 bir yapay zekâ, türlerinin ne anlama geldiğini görebilir.
 
+### 🕸️ İlişkiler
+
+Zaman çizgisi neyin ne zaman olduğunu gösterir; **ilişkiler** görünümü kimin
+kimle bir arada olduğunu. Açık not ortada durur; bağlantı alanlarının (üyeler,
+yer, sakinler, düşmanlar…) ve yasaların onu bağladığı her not çevresinde, iki
+yönde ve her çizgi kendi alanının adıyla. Bir nota tıklayınca ona geçersin,
+**2**'ye basınca bir adım daha öteye bakarsın; başka notları okurken bir notu
+ortada tutmak için görünümü kilitlersin.
+
+<div align="center">
+
+<img src="docs/images/tr/relations.png" alt="Deniz Feneri'ni ortalayan ilişkiler görünümü: orada geçen olaylar ve orada yaşayan karakterler, her çizgi Yer ya da Sakinleri diye adlandırılmış" width="900" />
+
+<sub>🕸️ Ortada Deniz Feneri — orada neler oluyor ve orada kim yaşıyor</sub>
+
+</div>
+
+Tür kaydında bir türe eklediğin her `link` ya da `links` alanı burada görünür.
+
 ### ⚖️ Kimin çiğnediğini bilen yasalar
 
 Evren geneli fizik ve varlığa özel kurallar, iki katman halinde. Varlıklar hangi
@@ -323,7 +343,7 @@ hiçbir şey uydurulmaz. Arşivlenmiş bir sürüm açıldığında bunun yerine
 | 📊 | **Pano** | Türe göre sayılar, yarım kalan her şey (yarısı yazılmışlar dokunulmamışların üstünde) ve tutarlılık raporu |
 | 🩺 | **Tutarlılık** | On beş çeşit kontrol (aşağıda), her biri bir çiple kapatılabilir. **Sadece uyarı amaçlı:** hiçbir şeyi düzeltmez, hiçbir işlemi engellemez; çünkü bulguların çoğu hata değil, devam eden iştir |
 | 🔍 | **Arama** | Türe, duruma, zaman çizgisine, akışa ve zaman aralığına göre süzer. Obsidian'ın kendi araması kelimeleri zaten buluyor; bu, *"ana evrende yarım kalmış tüm karakterler"* sorusunu cevaplıyor |
-| 📤 | **Dışa aktarma** | Seçtiğin bölümlerden tek bir Markdown dokümanı. Notlarda gizlilik bayrağının olmamasının sebebi budur: okuyucunun ne göreceği paylaşırken belirlenir, her notta sonsuza kadar saklanmaz |
+| 📤 | **Dışa aktarma** | Seçtiğin notlar, türe ya da zaman çizgisine göre bölümlenmiş olarak: Markdown notu, tek sayfa **HTML kitap** (görseller içinde, çevrimdışı açılır, iyi yazdırılır), **HTML wiki** (her not bir sayfa, "buraya bağlananlar" listeleriyle) ya da Obsidian'ın kendi PDF dışa aktarımıyla **PDF**. Dışa aktarılan notlar arasındaki bağlantılar çalışır; dışarıda kalanlara bağlantılar düz metin olur. Notlarda gizlilik bayrağının olmamasının sebebi budur: okuyucunun ne göreceği paylaşırken belirlenir, her notta sonsuza kadar saklanmaz |
 
 <table><tr><td width="50%" valign="top">
 
@@ -381,13 +401,23 @@ Rehberi soldaki kitap simgesinden, **Rehberi aç** komutundan ya da
 
 ### 📥 Kurulum
 
-Henüz topluluk eklenti listesinde değil. O zamana kadar:
+Lore Creator, Obsidian'ın topluluk eklentileri arasında:
+[community.obsidian.md/plugins/lore-creator](https://community.obsidian.md/plugins/lore-creator).
+
+1. Obsidian'da: **Ayarlar → Topluluk eklentileri**, kısıtlı mod açıksa kapat,
+   sonra **Göz at**'a bas ve *Lore Creator*'ı ara.
+2. **Yükle**, ardından **Etkinleştir**.
+
+<details>
+<summary>Elle kurulum</summary>
 
 1. [Son sürümden](https://github.com/PancstaR/lore-creator/releases/latest)
    `main.js`, `manifest.json` ve `styles.css` dosyalarını indir.
 2. `<vault>/.obsidian/plugins/lore-creator/` klasörüne koy.
 3. Obsidian'da: **Ayarlar → Topluluk eklentileri**, kısıtlı modu kapat, sonra
    *Lore Creator*'ı etkinleştir.
+
+</details>
 
 > [!TIP]
 > İlk açılışta rehber kendiliğinden açılır. *Evrenini kur* bölümü sonraki iki
@@ -509,7 +539,7 @@ flowchart LR
 |---|---|---|
 | 🪄 | Bu vault'u kur | Klasörleri, şablonları ve tür kaydını oluşturur |
 | 📄 | Yeni lore notu | Bir türün şablonundan not oluşturur |
-| 🪟 | Zaman çizgisini / yasaları / taslakları / panoyu aç | Bir görünüm açar |
+| 🪟 | Zaman çizgisini / ilişkileri / yasaları / taslakları / panoyu aç | Bir görünüm açar |
 | 📖 | Rehberi aç | Eklenti içi rehberi açar |
 | 📅 | Zaman sistemini düzenle | Birimi, birim başına günü ve Dünya zamanıyla bağı değiştirir |
 | 📝 | Bu notun sürümleri | Sürümleri listeler, oluşturur, değiştirir, arşivler |
@@ -518,7 +548,7 @@ flowchart LR
 | 🎯 | Bu notu zaman çizgisinde göster | Zaman çizgisini açık notu ortalayarak açar |
 | 💡 | Bu taslağı terfi et | Bir eskizi gerçek nota dönüştürür |
 | 🔍 | Evrende ara | Metne göre değil, alanlara göre arar |
-| 📤 | Evreni dışa aktar | Tek bir Markdown dokümanı üretir |
+| 📤 | Evreni dışa aktar | Markdown notu, HTML kitap, HTML wiki ya da PDF üretir |
 
 **Zaman çizgisinde:** <kbd>Tab</kbd> notlara ulaşır, ok tuşları aralarında gezer,
 <kbd>Enter</kbd> açar, <kbd>+</kbd> <kbd>−</kbd> yakınlaştırır, <kbd>0</kbd>
@@ -609,6 +639,9 @@ gereken iki şey:
 - 🛡️ **Yıkıcı hiçbir işlem onay penceresi olmadan gerçekleşmez**; dosya
   taşımaları da bir hata durumunda boşluk değil kopya bırakacak şekilde
   sıralanmıştır.
+
+💖 Lore Creator ücretsiz. Yazmana yardımcı oluyorsa geliştirilmesini
+[GitHub Sponsors üzerinden destekleyebilirsin](https://github.com/sponsors/PancstaR).
 
 ---
 

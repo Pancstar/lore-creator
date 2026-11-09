@@ -30,6 +30,7 @@ export const guideTr: Record<string, string> = {
 	"guide.action.newNote": "Yeni bir not yaz",
 	"guide.action.openTimeline": "Zaman çizgisini aç",
 	"guide.action.openDashboard": "Panoyu aç",
+	"guide.action.openRelations": "İlişkileri aç",
 
 	// 1. Giriş
 	"guide.intro.title": "Lore Creator nedir?",
@@ -107,6 +108,15 @@ export const guideTr: Record<string, string> = {
 	"guide.links.3": "Bir sayfanın birden fazla \"sonraki\"si olabilir. Hikâye böyle iki yola ayrılır.",
 	"guide.links.tip": "Hikâyende kayboldun mu? Okları izle. Seni hep ana yola geri götürürler.",
 	"guide.links.curious": "Oklar next ve prev alanlarıdır; her biri [[Fırtına]] gibi bağlantıların listesidir.",
+
+	"guide.relations.title": "Kim kime bağlı",
+	"guide.relations.1":
+		"Zaman çizgisi neyin ne zaman olduğunu gösterir. İlişkiler ise kimin kimle bir arada olduğunu: kim nerede yaşıyor, kim hangi grupta, kim neye katılıyor.",
+	"guide.relations.2":
+		"İlişkileri açınca okuduğun not ortada durur, bağlı olduğu her şey çevresinde. Başka bir nota tıklayınca ona geçersin. Bir adım daha öteye bakmak için 2'ye bas.",
+	"guide.relations.tip": "Başka notları okurken bir notu ortada tutmak mı istiyorsun? Kilide bas.",
+	"guide.relations.curious":
+		"Çizgiler her türün bağlantı alanlarından (üyeler, yer, düşmanlar…) ve laws ile breaks-law alanlarından gelir. Türler notunda bir türe yeni bağlantı alanları ekleyebilirsin.",
 
 	// 8. Pano
 	"guide.dashboard.title": "Pano: neler bitmedi",

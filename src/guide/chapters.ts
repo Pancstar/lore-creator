@@ -12,6 +12,7 @@ export type ChapterId =
 	| "timeline"
 	| "flows"
 	| "links"
+	| "relations"
 	| "dashboard"
 	| "versions"
 	| "lawsDrafts"
@@ -25,6 +26,7 @@ export type GuideAction =
 	| "newNote"
 	| "openTimeline"
 	| "openDashboard"
+	| "openRelations"
 	| "createExample"
 	| "removeExample";
 
@@ -147,6 +149,18 @@ export const CHAPTERS: Chapter[] = [
 			text("guide.links.3"),
 			tip("guide.links.tip"),
 			curious("guide.links.curious"),
+		],
+	},
+	{
+		id: "relations",
+		group: "writing",
+		minutes: 1,
+		blocks: [
+			text("guide.relations.1"),
+			text("guide.relations.2"),
+			{ kind: "action", action: "openRelations", key: "guide.action.openRelations" },
+			tip("guide.relations.tip"),
+			curious("guide.relations.curious"),
 		],
 	},
 	{

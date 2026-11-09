@@ -162,13 +162,33 @@ export function buildExampleNotes(lang: ExampleLang): ExampleNote[] {
 		note(at(n.mira), ["type: character", 'icon: "🧭"', "status: done"], b.mira),
 		note(at(n.tobin), ["type: character", 'icon: "🎣"', "status: partial", ...linkList("breaks-law", [n.law])], b.tobin),
 		note(at(n.vessa), ["type: character", 'icon: "🧓"', "status: draft"], b.vessa),
-		note(at(n.lighthouse), ["type: place", 'icon: "🗼"', "status: done"], b.lighthouse),
+		note(
+			at(n.lighthouse),
+			["type: place", 'icon: "🗼"', "status: done", ...linkList("inhabitants", [n.mira, n.vessa])],
+			b.lighthouse,
+		),
 		note(at(n.law), ["type: law", 'icon: "📜"', "status: done", "scope: universe"], b.law),
-		event(n.storm, 1, "keeper", "done", [], [n.climb, n.steal], b.storm),
-		event(n.climb, 2, "keeper", "done", [n.storm], [n.dark], b.climb),
-		event(n.steal, 2, "village", "partial", [n.storm], [n.dark], b.steal, linkList("breaks-law", [n.law])),
-		event(n.dark, 3, "village", "partial", [n.climb, n.steal], [n.relight], b.dark),
-		event(n.relight, 4, "keeper", "draft", [n.dark], [], b.relight, ["version: v2"]),
+		// Who takes part and where: the relations view draws these.
+		event(n.storm, 1, "keeper", "done", [], [n.climb, n.steal], b.storm, [
+			...linkList("participants", [n.mira]),
+			linkOne("location", n.lighthouse),
+		]),
+		event(n.climb, 2, "keeper", "done", [n.storm], [n.dark], b.climb, [
+			...linkList("participants", [n.mira]),
+			linkOne("location", n.lighthouse),
+		]),
+		event(n.steal, 2, "village", "partial", [n.storm], [n.dark], b.steal, [
+			...linkList("breaks-law", [n.law]),
+			...linkList("participants", [n.tobin]),
+		]),
+		event(n.dark, 3, "village", "partial", [n.climb, n.steal], [n.relight], b.dark, [
+			linkOne("location", n.lighthouse),
+		]),
+		event(n.relight, 4, "keeper", "draft", [n.dark], [], b.relight, [
+			"version: v2",
+			...linkList("participants", [n.mira, n.vessa]),
+			linkOne("location", n.lighthouse),
+		]),
 		note(
 			`${dir}/${n.versions}/${n.relight} — v1.md`,
 			[

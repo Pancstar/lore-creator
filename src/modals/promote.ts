@@ -5,6 +5,7 @@ import { enterSubmits } from "./enterSubmits";
 import { linkTo } from "../links";
 import { ConfirmModal } from "./confirm";
 import type { TypeDefinition } from "../types";
+import { applyLang } from "../i18n";
 
 type BodyMode = "keep" | "move";
 
@@ -53,6 +54,7 @@ export class PromoteModal extends Modal {
 	}
 
 	onOpen() {
+		applyLang(this.modalEl);
 		enterSubmits(this.contentEl);
 		const t = (key: string, ...args: string[]) => this.plugin.i18n.t(key, ...args);
 		this.titleEl.setText(t("promote.title"));
